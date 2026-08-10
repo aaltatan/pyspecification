@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, computed_field
+from pydantic import BaseModel, Field, RootModel, computed_field
 
 
 class SimplePredicateSchema[T](RootModel[dict[str, list[T] | T]]):
@@ -45,8 +45,6 @@ class ConditionExpressionSchema(BaseModel):
     operator: Literal["and", "or"] = "and"
     inverse: bool = False
     expressions: list["Expression"] = Field(default_factory=list, min_length=1)
-
-    model_config = ConfigDict(extra="forbid")
 
 
 Expression = ConditionExpressionSchema | SimplePredicateSchema | PredicateSchema
