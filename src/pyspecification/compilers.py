@@ -18,7 +18,7 @@ class PredicateCompiler:
         initial_predicate_factory: Callable[[ConditionExpressionSchema], Predicate[Any, Any]],
     ) -> None:
         self._predicates = predicates
-        self._initial_predicate = initial_predicate_factory
+        self._initial_predicate_factory = initial_predicate_factory
 
     def compile(self, expression: Expression) -> Predicate[Any, Any]:
         if isinstance(expression, ConditionExpressionSchema):
@@ -37,7 +37,7 @@ class PredicateCompiler:
         return predicate
 
     def _compile_condition(self, schema: ConditionExpressionSchema) -> Predicate[Any, Any]:
-        predicate = self._initial_predicate(schema)
+        predicate = self._initial_predicate_factory(schema)
 
         if schema.inverse:
             predicate = ~predicate
