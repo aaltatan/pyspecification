@@ -60,7 +60,7 @@ class PredicateRegistry[T, R: PredicateResult]:
         self,
         *,
         name: str | None = None,
-        process_fn: Callable[[Any], Any] | None = None,
+        process_fn: ProcessFn | None = None,
     ) -> Callable[[RuleDefinitionFn[T, R, P]], RuleFn[T, R, P]]:
         def decorator(fn: RuleDefinitionFn[T, R, P]) -> RuleFn[T, R, P]:
             return self._register_rule(fn, name=name, process_fn=process_fn)
@@ -72,7 +72,7 @@ class PredicateRegistry[T, R: PredicateResult]:
         fn: RuleDefinitionFn[T, R, P],
         *,
         name: str | None = None,
-        process_fn: Callable[[Any], Any] | None = None,
+        process_fn: ProcessFn | None = None,
     ) -> RuleFn[T, R, P]:
         return self._register_rule(fn, name=name, process_fn=process_fn)
 
@@ -80,7 +80,7 @@ class PredicateRegistry[T, R: PredicateResult]:
         self,
         fns: Iterable[tuple[str, RuleDefinitionFn[T, R, P]]],
         *,
-        process_fn: Callable[[Any], Any] | None = None,
+        process_fn: ProcessFn | None = None,
     ) -> None:
         for name, fn in fns:
             self._register_rule(fn, name=name, process_fn=process_fn)
@@ -111,15 +111,15 @@ class PredicateRegistry[T, R: PredicateResult]:
 
         return wrapper
 
-    def _process(self, value: T | list[T], processor: ProcessFn) -> T | list[T]:
-        return [processor(v) for v in value] if isinstance(value, list) else processor(value)
+    def _process(self, value: T | list[T], process_fn: ProcessFn) -> T | list[T]:
+        return [process_fn(v) for v in value] if isinstance(value, list) else process_fn(value)
 
-    def _process_args(self, processor: ProcessFn, *args: Any) -> tuple[Any, ...]:
-        return tuple(self._process(arg, processor) for arg in args)
+    def _process_args(self, process_fn: ProcessFn, *args: Any) -> tuple[Any, ...]:
+        return tuple(self._process(arg, process_fn) for arg in args)
 
-    def _process_kwargs(self, processor: ProcessFn, **kwargs: Any) -> dict[str, Any]:
+    def _process_kwargs(self, process_fn: ProcessFn, **kwargs: Any) -> dict[str, Any]:
         return {
-            key: self._process(kwarg, processor)
+            key: self._process(kwarg, process_fn)
             for key, kwarg in kwargs.items()
             if kwargs is not None
         }
