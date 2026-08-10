@@ -62,6 +62,28 @@ def test_is_true(employee: Employee, rule: Predicate[Employee, bool]) -> None:
         {"gender__is_male": [], "is_active": []},
         {"age__gt": 30, "salary__le": 100},
         {"age__gt": 30, "salary__le": 100, "gender__is_male": [], "is_active": []},
+        {
+            "operator": "or",
+            "expressions": [
+                {
+                    "-is_active": [],
+                },
+                {
+                    "operator": "and",
+                    "expressions": [
+                        {
+                            "age__gt": 30,
+                        },
+                        {
+                            "salary__le": 1000,
+                        },
+                        {
+                            "gender__is_male": [],
+                        },
+                    ],
+                },
+            ],
+        },
     ],
 )
 def test_rule_dict_is_true(
