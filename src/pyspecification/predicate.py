@@ -2,13 +2,13 @@ from collections.abc import Callable
 from typing import Any, Protocol
 
 
-class PredicateResult(Protocol):
+class ReturnType(Protocol):
     def __and__(self, value: Any, /) -> Any: ...
     def __or__(self, value: Any, /) -> Any: ...
     def __invert__(self) -> Any: ...
 
 
-class Predicate[T, R: PredicateResult]:
+class Predicate[T, R: ReturnType]:
     def __init__(self, fn: Callable[[T], R]) -> None:
         self._fn = fn
 

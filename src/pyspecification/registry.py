@@ -5,14 +5,14 @@ from typing import Any, Concatenate
 
 from pydantic import TypeAdapter
 
-from .predicate import Predicate, PredicateResult
+from .predicate import Predicate, ReturnType
 
 # -----------------------
 # models
 # -----------------------
 
-type RuleDefinitionFn[T, R: PredicateResult, **P] = Callable[Concatenate[T, P], R]
-type RuleFn[T, R: PredicateResult, **P] = Callable[P, Predicate[T, R]]
+type RuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, P], R]
+type RuleFn[T, R: ReturnType, **P] = Callable[P, Predicate[T, R]]
 type ProcessFn = Callable[[Any], Any]
 
 # -----------------------
@@ -35,7 +35,7 @@ class RuleNotRegisteredError(Exception):
 # -----------------------
 
 
-class PredicateRegistry[T, R: PredicateResult]:
+class PredicateRegistry[T, R: ReturnType]:
     def __init__(self) -> None:
         self._rules: dict[str, RuleFn] = {}
 
