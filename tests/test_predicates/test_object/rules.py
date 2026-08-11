@@ -1,8 +1,8 @@
-from pyspecification import PredicateRegistry
+from pyspecification import ObjectPredicateRegistry
 
-from .models import Employee
+from tests.test_predicates.test_object.models import Employee
 
-predicates = PredicateRegistry[Employee, bool]()
+predicates = ObjectPredicateRegistry[Employee, bool]()
 
 
 # -----------------------

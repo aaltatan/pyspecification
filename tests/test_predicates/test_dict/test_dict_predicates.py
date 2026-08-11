@@ -4,8 +4,7 @@ from typing import Any
 import pytest
 from pyspecification import Predicate, PredicateCompiler, read_expression
 
-from .models import Employee
-from .predicates import age__gt, gender__is_male, is_active, predicates, salary__le
+from .rules import eq, gt, is_true, le, predicates
 
 # -----------------------
 # fixtures
@@ -13,8 +12,14 @@ from .predicates import age__gt, gender__is_male, is_active, predicates, salary_
 
 
 @pytest.fixture
-def employee() -> Employee:
-    return Employee(name="Abdullah", age=31, salary=1000, gender="male", is_active=True)
+def employee() -> dict[str, Any]:
+    return {
+        "name": "Abdullah",
+        "age": 31,
+        "salary": 1000,
+        "gender": "male",
+        "is_active": True,
+    }
 
 
 @pytest.fixture
@@ -46,39 +51,44 @@ def predicate_getter(
 @pytest.mark.parametrize(
     "rule",
     [
-        gender__is_male() & is_active(),
-        age__gt(30) & salary__le(1000),
-        age__gt(30) & salary__le(1000) & gender__is_male() & is_active(),
-        ~is_active() | (age__gt(30) & salary__le(1000) & gender__is_male()),
+        eq("gender", "male") & is_true("is_active"),
+        gt("age", 30) & le("salary", 1000),
+        gt("age", 30) & le("salary", 1000) & eq("gender", "male") & is_true("is_active"),
+        ~is_true("is_active") | (gt("age", 30) & le("salary", 1000) & eq("gender", "male")),
     ],
 )
-def test_is_true(employee: Employee, rule: Predicate[Employee, bool]) -> None:
+def test_is_true(employee: dict[str, Any], rule: Predicate[dict[str, Any], bool]) -> None:
     assert bool(rule(employee)) is True
 
 
 @pytest.mark.parametrize(
     "rule_dict",
     [
-        {"gender__is_male": [], "is_active": []},
-        {"age__gt": 30, "salary__le": 100},
-        {"age__gt": 30, "salary__le": 100, "gender__is_male": [], "is_active": []},
+        {"eq": ["gender", "male"], "is_true": ["is_active"]},
+        {"gt": ["age", 30], "le": ["salary", 1000]},
+        {
+            "gt": ["age", 30],
+            "le": ["salary", 1000],
+            "eq": ["gender", "male"],
+            "is_true": ["is_active"],
+        },
         {
             "operator": "or",
             "expressions": [
                 {
-                    "-is_active": [],
+                    "-is_true": ["is_active"],
                 },
                 {
                     "operator": "and",
                     "expressions": [
                         {
-                            "age__gt": 30,
+                            "gt": ["age", 30],
                         },
                         {
-                            "salary__le": 1000,
+                            "le": ["salary", 1000],
                         },
                         {
-                            "gender__is_male": [],
+                            "eq": ["gender", "male"],
                         },
                     ],
                 },
@@ -87,7 +97,7 @@ def test_is_true(employee: Employee, rule: Predicate[Employee, bool]) -> None:
     ],
 )
 def test_rule_dict_is_true(
-    employee: Employee,
+    employee: dict[str, Any],
     predicate_getter: Callable[[dict[str, Any]], Predicate[Any, Any]],
     rule_dict: dict[str, Any],
 ) -> None:
