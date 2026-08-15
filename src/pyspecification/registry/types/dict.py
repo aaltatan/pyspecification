@@ -24,6 +24,12 @@ class DictPredicateRegistry[T: dict, K, R: ReturnType]:
     def rules_schema(self) -> dict[str, Any]:
         return get_rules_schema(self._rules)
 
+    def __str__(self) -> str:
+        return str(self.rules_schema)
+
+    def __repr__(self) -> str:
+        return repr(self.rules_schema)
+
     def __getitem__(self, name: str) -> RuleFn:
         if name not in self._rules:
             raise RuleNotRegisteredError(name)
