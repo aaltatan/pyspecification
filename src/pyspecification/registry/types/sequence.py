@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from functools import wraps
 from typing import Concatenate
 
@@ -6,24 +6,19 @@ from pyspecification.predicate import Predicate, ReturnType
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from pyspecification.registry.processors import ProcessFn, process_arguments
 
-type RuleDefinitionFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[T, K, P], R]
-type RuleFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[K, P], Predicate[T, R]]
+type RuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, int, P], R]
+type RuleFn[T, R: ReturnType, **P] = Callable[Concatenate[int, P], Predicate[T, R]]
 
 
-class PredicateKeyError(Exception):
-    def __init__(self, key: str) -> None:
-        super().__init__(f"Object has no key '{key}'")
-
-
-class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
+class SequencePredicateRegistry[T: Sequence, R: ReturnType]:
     def __init__(self) -> None:
-        self._rules: dict[str, RuleFn[T, K, R, ...]] = {}
+        self._rules: dict[str, RuleFn[T, R, ...]] = {}
 
     @property
-    def rules(self) -> dict[str, RuleFn[T, K, R, ...]]:
+    def rules(self) -> dict[str, RuleFn[T, R, ...]]:
         return self._rules
 
-    def __getitem__(self, name: str) -> RuleFn[T, K, R, ...]:
+    def __getitem__(self, name: str) -> RuleFn[T, R, ...]:
         if name not in self._rules:
             raise RuleNotRegisteredError(name)
         return self._rules[name]
@@ -34,8 +29,8 @@ class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
         name: str | None = None,
         args_process_fn: ProcessFn | None = None,
         kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
-    ) -> Callable[[RuleDefinitionFn[T, K, R, P]], RuleFn[T, K, R, P]]:
-        def decorator(fn: RuleDefinitionFn[T, K, R, P]) -> RuleFn[T, K, R, P]:
+    ) -> Callable[[RuleDefinitionFn[T, R, P]], RuleFn[T, R, P]]:
+        def decorator(fn: RuleDefinitionFn[T, R, P]) -> RuleFn[T, R, P]:
             return self._register_rule(
                 fn,
                 name=name,
@@ -47,12 +42,12 @@ class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
 
     def register_rule[**P](
         self,
-        fn: RuleDefinitionFn[T, K, R, P],
+        fn: RuleDefinitionFn[T, R, P],
         *,
         name: str | None = None,
         args_process_fn: ProcessFn | None = None,
         kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
-    ) -> RuleFn[T, K, R, P]:
+    ) -> RuleFn[T, R, P]:
         return self._register_rule(
             fn,
             name=name,
@@ -62,7 +57,7 @@ class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
 
     def register_rules[**P](
         self,
-        fns: Iterable[tuple[str, RuleDefinitionFn[T, K, R, P]]],
+        fns: Iterable[tuple[str, RuleDefinitionFn[T, R, P]]],
         *,
         process_fn: ProcessFn | None = None,
     ) -> None:
@@ -76,24 +71,24 @@ class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
 
     def _register_rule[**P](
         self,
-        fn: RuleDefinitionFn[T, K, R, P],
+        fn: RuleDefinitionFn[T, R, P],
         *,
         name: str | None = None,
         args_process_fn: ProcessFn | None = None,
         kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
-    ) -> RuleFn[T, K, R, P]:
+    ) -> RuleFn[T, R, P]:
         rule_name = name or fn.__name__
 
         if rule_name in self._rules:
             raise RuleAlreadyRegisteredError(rule_name)
 
         @wraps(fn)
-        def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
+        def wrapper(idx: int, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
             processed_args, processed_kwargs = process_arguments(
                 args, kwargs, args_process_fn=args_process_fn, kwargs_process_fns=kwargs_process_fns
             )
-            return Predicate(lambda obj: fn(obj, key, *processed_args, **processed_kwargs))
+            return Predicate(lambda obj: fn(obj, idx, *processed_args, **processed_kwargs))
 
-        self._rules[name or fn.__name__] = wrapper
+        self._rules[rule_name] = wrapper
 
         return wrapper

@@ -1,11 +1,10 @@
 from collections.abc import Callable, Iterable
 from functools import wraps
-from typing import Any, Concatenate
+from typing import Concatenate
 
 from pyspecification.predicate import Predicate, ReturnType
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
-from pyspecification.registry.processors import ProcessFn, process_args, process_kwargs
-from pyspecification.registry.schema import get_rules_schema
+from pyspecification.registry.processors import ProcessFn, process_arguments
 
 type RuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, P], R]
 type RuleFn[T, R: ReturnType, **P] = Callable[P, Predicate[T, R]]
@@ -16,16 +15,10 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
         self._rules: dict[str, RuleFn[T, R, ...]] = {}
 
     @property
-    def rules_schema(self) -> dict[str, Any]:
-        return get_rules_schema(self._rules)
+    def rules(self) -> dict[str, RuleFn[T, R, ...]]:
+        return self._rules
 
-    def __str__(self) -> str:
-        return str(self.rules_schema)
-
-    def __repr__(self) -> str:
-        return repr(self.rules_schema)
-
-    def __getitem__(self, name: str) -> RuleFn:
+    def __getitem__(self, name: str) -> RuleFn[T, R, ...]:
         if name not in self._rules:
             raise RuleNotRegisteredError(name)
         return self._rules[name]
@@ -91,16 +84,9 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
 
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            processed_args = (
-                process_args(args_process_fn, *args) if args_process_fn is not None else args
+            processed_args, processed_kwargs = process_arguments(
+                args, kwargs, args_process_fn=args_process_fn, kwargs_process_fns=kwargs_process_fns
             )
-
-            if kwargs_process_fns is not None:
-                process_fns, fallback_process_fn = kwargs_process_fns
-                processed_kwargs = process_kwargs(process_fns, fallback_process_fn, **kwargs)
-            else:
-                processed_kwargs = kwargs
-
             return Predicate(lambda obj: fn(obj, *processed_args, **processed_kwargs))
 
         self._rules[name or fn.__name__] = wrapper

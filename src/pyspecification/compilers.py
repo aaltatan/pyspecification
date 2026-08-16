@@ -1,12 +1,8 @@
 from collections.abc import Callable
-from typing import Any, Protocol
+from typing import Any
 
 from .predicate import Predicate
 from .schemas import ConditionExpressionSchema, Expression, PredicateSchema, SimplePredicateSchema
-
-
-class PredicateRegistry(Protocol):
-    def __getitem__(self, name: str) -> Callable: ...
 
 
 class ExpressionDoesNotMatchError(Exception):
@@ -17,10 +13,10 @@ class ExpressionDoesNotMatchError(Exception):
 class PredicateCompiler:
     def __init__(
         self,
-        predicates: PredicateRegistry,
+        rules: dict[str, Callable[..., Predicate[Any, Any]]],
         initial_predicate_factory: Callable[[ConditionExpressionSchema], Predicate[Any, Any]],
     ) -> None:
-        self._predicates = predicates
+        self._rules = rules
         self._initial_predicate_factory = initial_predicate_factory
 
     def compile(self, expression: Expression) -> Predicate[Any, Any]:
@@ -32,7 +28,7 @@ class PredicateCompiler:
     def _compile_single(
         self, schema: SimplePredicateSchema | PredicateSchema
     ) -> Predicate[Any, Any]:
-        predicate = self._predicates[schema.name](*schema.args, **schema.kwargs)
+        predicate = self._rules[schema.name](*schema.args, **schema.kwargs)
 
         if schema.inverse:
             predicate = ~predicate

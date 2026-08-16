@@ -20,7 +20,7 @@ def employee() -> Employee:
 @pytest.fixture
 def compiler() -> PredicateCompiler:
     return PredicateCompiler(
-        predicates=predicates,
+        rules=predicates.rules,
         initial_predicate_factory=lambda schema: Predicate(
             lambda _: schema.operator == "and",
         ),
@@ -60,8 +60,8 @@ def test_is_true(employee: Employee, rule: Predicate[Employee, bool]) -> None:
     "rule_dict",
     [
         {"gender__is_male": [], "is_active": []},
-        {"age__gt": 30, "salary__le": 100},
-        {"age__gt": 30, "salary__le": 100, "gender__is_male": [], "is_active": []},
+        {"age__gt": 30, "salary__le": 1000},
+        {"age__gt": 30, "salary__le": 1000, "gender__is_male": [], "is_active": []},
         {
             "operator": "or",
             "expressions": [

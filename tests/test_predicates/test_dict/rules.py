@@ -1,8 +1,8 @@
 from typing import Any
 
-from pyspecification import DictPredicateRegistry
+from pyspecification import MappingPredicateRegistry
 
-predicates = DictPredicateRegistry[dict[str, Any], str, bool]()
+predicates = MappingPredicateRegistry[dict[str, Any], str, bool]()
 
 
 @predicates.rule()

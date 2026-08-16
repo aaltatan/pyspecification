@@ -25,7 +25,7 @@ def employee() -> dict[str, Any]:
 @pytest.fixture
 def compiler() -> PredicateCompiler:
     return PredicateCompiler(
-        predicates=predicates,
+        rules=predicates.rules,
         initial_predicate_factory=lambda schema: Predicate(
             lambda _: schema.operator == "and",
         ),

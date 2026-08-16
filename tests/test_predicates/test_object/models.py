@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class Employee:
     name: str
     age: int
