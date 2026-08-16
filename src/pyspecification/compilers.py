@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .predicate import Predicate
-from .schemas import ConditionExpressionSchema, Expression, PredicateSchema, SimplePredicateSchema
+from .schemas import ConditionExpressionSchema, PredicateSchema
 
 
 class ExpressionDoesNotMatchError(Exception):
@@ -19,15 +19,15 @@ class PredicateCompiler:
         self._rules = rules
         self._initial_predicate_factory = initial_predicate_factory
 
-    def compile(self, expression: Expression) -> Predicate[Any, Any]:
+    def compile(
+        self, expression: ConditionExpressionSchema | PredicateSchema
+    ) -> Predicate[Any, Any]:
         if isinstance(expression, ConditionExpressionSchema):
             return self._compile_condition(expression)
 
         return self._compile_single(expression)
 
-    def _compile_single(
-        self, schema: SimplePredicateSchema | PredicateSchema
-    ) -> Predicate[Any, Any]:
+    def _compile_single(self, schema: PredicateSchema) -> Predicate[Any, Any]:
         predicate = self._rules[schema.name](*schema.args, **schema.kwargs)
 
         if schema.inverse:

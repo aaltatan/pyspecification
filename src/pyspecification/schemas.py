@@ -1,50 +1,43 @@
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, RootModel, computed_field
+from pydantic import AfterValidator, BaseModel, Field, field_validator
 
-
-class SimplePredicateSchema[T](RootModel[dict[str, list[T] | T]]):
-    @property
-    def _name(self) -> str:
-        return next(iter(self.root.keys()))
-
-    @computed_field
-    @property
-    def name(self) -> str:
-        return self._name if not self.inverse else self._name[1:]
-
-    @computed_field
-    @property
-    def args(self) -> list[T]:
-        result = self.root[self._name]
-
-        if not isinstance(result, list):
-            return [result]
-
-        return result
-
-    @computed_field
-    @property
-    def kwargs(self) -> dict[str, T]:
-        return {}
-
-    @computed_field
-    @property
-    def inverse(self) -> bool:
-        return self._name.startswith("-")
+from pyspecification.validators import validate_python_vars_fn_naming_convention
 
 
 class PredicateSchema(BaseModel):
-    name: str
+    name: Annotated[str, AfterValidator(validate_python_vars_fn_naming_convention)]
     inverse: bool = False
     args: list[Any] = Field(default_factory=list)
     kwargs: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("kwargs", mode="after")
+    @classmethod
+    def _validate_kwargs(cls, v: dict[str, Any]) -> dict[str, Any]:
+        [validate_python_vars_fn_naming_convention(name) for name in v]
+        return v
+
+    @classmethod
+    def from_simple_form[T](cls, root: dict[str, list[T] | T]) -> "PredicateSchema":
+        inputted_name = next(iter(root.keys()))
+        arguments = root[inputted_name]
+
+        name = inputted_name.removeprefix("-")
+        inverse = inputted_name.startswith("-")
+
+        if arguments is None:
+            return cls(name=name, args=[], kwargs={}, inverse=inverse)
+
+        if isinstance(arguments, dict):
+            return cls(name=name, args=[], kwargs=arguments, inverse=inverse)
+
+        if not isinstance(arguments, list):
+            return cls(name=name, args=[arguments], kwargs={}, inverse=inverse)
+
+        return cls(name=name, args=arguments, kwargs={}, inverse=inverse)
 
 
 class ConditionExpressionSchema(BaseModel):
     operator: Literal["and", "or"] = "and"
     inverse: bool = False
-    expressions: list["Expression"] = Field(default_factory=list, min_length=1)
-
-
-Expression = ConditionExpressionSchema | SimplePredicateSchema | PredicateSchema
+    expressions: list["ConditionExpressionSchema | PredicateSchema"] = Field(min_length=1)

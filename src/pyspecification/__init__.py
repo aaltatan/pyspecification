@@ -6,11 +6,10 @@ from .registry.schema import get_rules_schema
 from .registry.types.dict import MappingPredicateRegistry
 from .registry.types.object import ObjectPredicateRegistry
 from .registry.types.sequence import SequencePredicateRegistry
-from .schemas import ConditionExpressionSchema, Expression, PredicateSchema, SimplePredicateSchema
+from .schemas import ConditionExpressionSchema, PredicateSchema
 
 __all__ = [
     "ConditionExpressionSchema",
-    "Expression",
     "ExpressionDoesNotMatchError",
     "MappingPredicateRegistry",
     "ObjectPredicateRegistry",
@@ -20,7 +19,6 @@ __all__ = [
     "RuleAlreadyRegisteredError",
     "RuleNotRegisteredError",
     "SequencePredicateRegistry",
-    "SimplePredicateSchema",
     "get_rules_schema",
     "read_expression",
 ]
