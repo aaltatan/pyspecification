@@ -16,7 +16,7 @@ class PredicateKeyError(Exception):
         super().__init__(f"Object has no key '{key}'")
 
 
-class DictPredicateRegistry[T: dict, K, R: ReturnType, **P]:
+class DictPredicateRegistry[T: dict, K, R: ReturnType]:
     def __init__(self) -> None:
         self._rules: dict[str, RuleFn[T, K, R, ...]] = {}
 
@@ -35,7 +35,7 @@ class DictPredicateRegistry[T: dict, K, R: ReturnType, **P]:
             raise RuleNotRegisteredError(name)
         return self._rules[name]
 
-    def rule(
+    def rule[**P](
         self,
         *,
         name: str | None = None,
@@ -52,7 +52,7 @@ class DictPredicateRegistry[T: dict, K, R: ReturnType, **P]:
 
         return decorator
 
-    def register_rule(
+    def register_rule[**P](
         self,
         fn: RuleDefinitionFn[T, K, R, P],
         *,
@@ -67,7 +67,7 @@ class DictPredicateRegistry[T: dict, K, R: ReturnType, **P]:
             kwargs_process_fns=kwargs_process_fns,
         )
 
-    def register_rules(
+    def register_rules[**P](
         self,
         fns: Iterable[tuple[str, RuleDefinitionFn[T, K, R, P]]],
         *,
@@ -81,7 +81,7 @@ class DictPredicateRegistry[T: dict, K, R: ReturnType, **P]:
                 kwargs_process_fns=({}, process_fn) if process_fn else None,
             )
 
-    def _register_rule(
+    def _register_rule[**P](
         self,
         fn: RuleDefinitionFn[T, K, R, P],
         *,

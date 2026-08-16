@@ -11,7 +11,7 @@ type RuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, P], R]
 type RuleFn[T, R: ReturnType, **P] = Callable[P, Predicate[T, R]]
 
 
-class ObjectPredicateRegistry[T, R: ReturnType, **P]:
+class ObjectPredicateRegistry[T, R: ReturnType]:
     def __init__(self) -> None:
         self._rules: dict[str, RuleFn[T, R, ...]] = {}
 
@@ -30,7 +30,7 @@ class ObjectPredicateRegistry[T, R: ReturnType, **P]:
             raise RuleNotRegisteredError(name)
         return self._rules[name]
 
-    def rule(
+    def rule[**P](
         self,
         *,
         name: str | None = None,
@@ -47,7 +47,7 @@ class ObjectPredicateRegistry[T, R: ReturnType, **P]:
 
         return decorator
 
-    def register_rule(
+    def register_rule[**P](
         self,
         fn: RuleDefinitionFn[T, R, P],
         *,
@@ -62,7 +62,7 @@ class ObjectPredicateRegistry[T, R: ReturnType, **P]:
             kwargs_process_fns=kwargs_process_fns,
         )
 
-    def register_rules(
+    def register_rules[**P](
         self,
         fns: Iterable[tuple[str, RuleDefinitionFn[T, R, P]]],
         *,
@@ -76,7 +76,7 @@ class ObjectPredicateRegistry[T, R: ReturnType, **P]:
                 kwargs_process_fns=({}, process_fn) if process_fn else None,
             )
 
-    def _register_rule(
+    def _register_rule[**P](
         self,
         fn: RuleDefinitionFn[T, R, P],
         *,
