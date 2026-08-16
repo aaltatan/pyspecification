@@ -4,7 +4,7 @@ from typing import Concatenate
 
 from pyspecification.predicate import Predicate, ReturnType
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
-from pyspecification.registry.processors import ProcessFn, process_arguments
+from pyspecification.registry.processors import ProcessFn, process_arguments, process_rule_name
 
 type RuleDefinitionFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[T, K, P], R]
 type RuleFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[K, P], Predicate[T, R]]
@@ -82,7 +82,7 @@ class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
         args_process_fn: ProcessFn | None = None,
         kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
     ) -> RuleFn[T, K, R, P]:
-        rule_name = name or fn.__name__
+        rule_name = process_rule_name(fn, name)
 
         if rule_name in self._rules:
             raise RuleAlreadyRegisteredError(rule_name)
@@ -94,6 +94,6 @@ class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
             )
             return Predicate(lambda obj: fn(obj, key, *processed_args, **processed_kwargs))
 
-        self._rules[name or fn.__name__] = wrapper
+        self._rules[rule_name] = wrapper
 
         return wrapper
