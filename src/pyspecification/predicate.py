@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from functools import wraps
 from typing import Any, Concatenate, Protocol
 
@@ -26,7 +26,7 @@ class Predicate[T, R: ReturnType]:
         return Predicate(lambda obj: ~self(obj))
 
 
-def obj_rule[T, R: ReturnType, **P](
+def object_rule[T, R: ReturnType, **P](
     fn: Callable[Concatenate[T, P], R],
 ) -> Callable[P, Predicate[T, R]]:
     @wraps(fn)
@@ -36,7 +36,7 @@ def obj_rule[T, R: ReturnType, **P](
     return wrapper
 
 
-def dict_rule[T, K, R: ReturnType, **P](
+def dictionary_rule[T: dict, K, R: ReturnType, **P](
     fn: Callable[Concatenate[T, K, P], R],
 ) -> Callable[Concatenate[K, P], Predicate[T, R]]:
     @wraps(fn)
@@ -46,7 +46,7 @@ def dict_rule[T, K, R: ReturnType, **P](
     return wrapper
 
 
-def sequence_rule[T, R: ReturnType, **P](
+def sequence_rule[T: Sequence, R: ReturnType, **P](
     fn: Callable[Concatenate[T, int, P], R],
 ) -> Callable[Concatenate[int, P], Predicate[T, R]]:
     @wraps(fn)

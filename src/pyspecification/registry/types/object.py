@@ -2,7 +2,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from pyspecification.predicate import Predicate, ReturnType, obj_rule
+from pyspecification.predicate import Predicate, ReturnType, object_rule
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from pyspecification.registry.processors import ProcessFn, process_arguments, process_rule_name
 
@@ -76,7 +76,7 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
                 args_process_fn=args_process_fn,
                 kwargs_process_fns=kwargs_process_fns,
             )
-            return obj_rule(fn)(*processed_args, **processed_kwargs)
+            return object_rule(fn)(*processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
 

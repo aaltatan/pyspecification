@@ -1,5 +1,5 @@
 from .compilers import PredicateCompiler
-from .predicate import Predicate, dict_rule, obj_rule, sequence_rule
+from .predicate import Predicate, dictionary_rule, object_rule, sequence_rule
 from .registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from .registry.schema import get_rules_schema
 from .registry.types.dict import DictPredicateRegistry
@@ -16,8 +16,8 @@ __all__ = [
     "RuleAlreadyRegisteredError",
     "RuleNotRegisteredError",
     "SequencePredicateRegistry",
-    "dict_rule",
+    "dictionary_rule",
     "get_rules_schema",
-    "obj_rule",
+    "object_rule",
     "sequence_rule",
 ]

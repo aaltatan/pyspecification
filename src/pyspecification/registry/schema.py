@@ -5,12 +5,18 @@ from typing import Any
 from pydantic import TypeAdapter
 
 
-def get_rules_schema(rules: dict[str, Callable[..., Any]]) -> dict[str, Any]:
+def get_rules_schema(
+    rules: dict[str, Callable[..., Any]], *, sort_by_name: bool = True
+) -> dict[str, Any]:
     schema = {
         name: {**_get_annotations(fn), "description": fn.__doc__ or ""}
         for name, fn in rules.items()
     }
-    return dict(sorted(schema.items(), key=lambda item: item[0]))
+
+    if sort_by_name:
+        schema = dict(sorted(schema.items(), key=lambda item: item[0]))
+
+    return schema
 
 
 def _get_annotations(fn: Callable[..., Any]) -> dict[str, Any]:
