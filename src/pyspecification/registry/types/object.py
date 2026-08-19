@@ -1,8 +1,8 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from pyspecification.predicate import Predicate, ReturnType
+from pyspecification.predicate import Predicate, ReturnType, obj_rule
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from pyspecification.registry.processors import ProcessFn, process_arguments, process_rule_name
 
@@ -55,20 +55,6 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
             kwargs_process_fns=kwargs_process_fns,
         )
 
-    def register_rules[**P](
-        self,
-        fns: Iterable[tuple[str, RuleDefinitionFn[T, R, P]]],
-        *,
-        process_fn: ProcessFn | None = None,
-    ) -> None:
-        for name, fn in fns:
-            self._register_rule(
-                fn,
-                name=name,
-                args_process_fn=process_fn,
-                kwargs_process_fns=({}, process_fn) if process_fn else None,
-            )
-
     def _register_rule[**P](
         self,
         fn: RuleDefinitionFn[T, R, P],
@@ -85,9 +71,12 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
             processed_args, processed_kwargs = process_arguments(
-                args, kwargs, args_process_fn=args_process_fn, kwargs_process_fns=kwargs_process_fns
+                args,
+                kwargs,
+                args_process_fn=args_process_fn,
+                kwargs_process_fns=kwargs_process_fns,
             )
-            return Predicate(lambda obj: fn(obj, *processed_args, **processed_kwargs))
+            return obj_rule(fn)(*processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
 

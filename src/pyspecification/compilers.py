@@ -41,9 +41,6 @@ class PredicateCompiler:
     def _compile_condition(self, schema: ConditionExpressionSchema) -> Predicate[Any, Any]:
         predicate = self._initial_predicate_factory(schema)
 
-        if schema.inverse:
-            predicate = ~predicate
-
         for condition in schema.expressions:
             compiled_predicate = self.compile(ExpressionSchema(root=condition))
 
@@ -51,5 +48,8 @@ class PredicateCompiler:
                 predicate &= compiled_predicate
             else:
                 predicate |= compiled_predicate
+
+        if schema.inverse:
+            predicate = ~predicate
 
         return predicate

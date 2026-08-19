@@ -1,8 +1,8 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from pyspecification.predicate import Predicate, ReturnType
+from pyspecification.predicate import Predicate, ReturnType, dict_rule
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from pyspecification.registry.processors import ProcessFn, process_arguments, process_rule_name
 
@@ -10,12 +10,7 @@ type RuleDefinitionFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[T, 
 type RuleFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[K, P], Predicate[T, R]]
 
 
-class PredicateKeyError(Exception):
-    def __init__(self, key: str) -> None:
-        super().__init__(f"Object has no key '{key}'")
-
-
-class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
+class DictPredicateRegistry[T: dict, K, R: ReturnType]:
     def __init__(self) -> None:
         self._rules: dict[str, RuleFn[T, K, R, ...]] = {}
 
@@ -60,20 +55,6 @@ class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
             kwargs_process_fns=kwargs_process_fns,
         )
 
-    def register_rules[**P](
-        self,
-        fns: Iterable[tuple[str, RuleDefinitionFn[T, K, R, P]]],
-        *,
-        process_fn: ProcessFn | None = None,
-    ) -> None:
-        for name, fn in fns:
-            self._register_rule(
-                fn,
-                name=name,
-                args_process_fn=process_fn,
-                kwargs_process_fns=({}, process_fn) if process_fn else None,
-            )
-
     def _register_rule[**P](
         self,
         fn: RuleDefinitionFn[T, K, R, P],
@@ -92,7 +73,7 @@ class MappingPredicateRegistry[T: dict, K, R: ReturnType]:
             processed_args, processed_kwargs = process_arguments(
                 args, kwargs, args_process_fn=args_process_fn, kwargs_process_fns=kwargs_process_fns
             )
-            return Predicate(lambda obj: fn(obj, key, *processed_args, **processed_kwargs))
+            return dict_rule(fn)(key, *processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
 
