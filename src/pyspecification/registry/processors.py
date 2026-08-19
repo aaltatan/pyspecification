@@ -33,11 +33,7 @@ def process_arguments(
 
     process_fns, fallback_process_fn = kwargs_process_fns
 
-    processed_kwargs = _process_kwargs(
-        process_fns,
-        fallback_process_fn,
-        **kwargs,
-    )
+    processed_kwargs = _process_kwargs(process_fns, fallback_process_fn, **kwargs)
 
     return processed_args, processed_kwargs
 
@@ -51,9 +47,7 @@ def _process_args(processor: ProcessFn, *args: Any) -> tuple[Any, ...]:
 
 
 def _process_kwargs(
-    processors: dict[str, ProcessFn],
-    fallback_processor: ProcessFn,
-    **kwargs: Any,
+    processors: dict[str, ProcessFn], fallback_processor: ProcessFn, **kwargs: Any
 ) -> dict[str, Any]:
     processed_kwargs = {}
 
