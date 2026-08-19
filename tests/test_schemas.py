@@ -1,7 +1,7 @@
 from typing import Any
 
 import pytest
-from pyspecification.schemas import PredicateSchema
+from pyspecification.schemas import PredicateSchema, SimplePredicateSchema
 
 
 @pytest.mark.parametrize(
@@ -46,7 +46,7 @@ from pyspecification.schemas import PredicateSchema
     ],
 )
 def test_predicate_schema(simple_form: dict[str, Any], data: dict[str, Any]) -> None:
-    simple = PredicateSchema.from_simple_form(simple_form)
+    simple = SimplePredicateSchema(simple_form)
 
     assert simple.name == data["name"]
     assert simple.args == data["args"]

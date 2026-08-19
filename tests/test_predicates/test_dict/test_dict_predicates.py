@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Any
 
 import pytest
-from pyspecification import Predicate, PredicateCompiler, read_expression
+from pyspecification import ExpressionSchema, Predicate, PredicateCompiler
 
 from .rules import eq, gt, is_true, le, predicates
 
@@ -37,7 +37,7 @@ def predicate_getter(
     compiler: PredicateCompiler,
 ) -> Callable[[dict[str, Any]], Predicate[Any, Any]]:
     def inner(rule_dict: dict[str, Any]) -> Predicate[Any, Any]:
-        expression = read_expression(rule_dict)
+        expression = ExpressionSchema(**rule_dict)
         return compiler.compile(expression)
 
     return inner

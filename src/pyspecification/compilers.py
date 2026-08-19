@@ -2,12 +2,12 @@ from collections.abc import Callable
 from typing import Any
 
 from .predicate import Predicate
-from .schemas import ConditionExpressionSchema, PredicateSchema
-
-
-class ExpressionDoesNotMatchError(Exception):
-    def __init__(self, expression: str) -> None:
-        super().__init__(f"Expression '{expression}' does not match")
+from .schemas import (
+    ConditionExpressionSchema,
+    ExpressionSchema,
+    PredicateSchema,
+    SimplePredicateSchema,
+)
 
 
 class PredicateCompiler:
@@ -19,15 +19,18 @@ class PredicateCompiler:
         self._rules = rules
         self._initial_predicate_factory = initial_predicate_factory
 
-    def compile(
-        self, expression: ConditionExpressionSchema | PredicateSchema
+    def compile(self, expression: ExpressionSchema) -> Predicate[Any, Any]:
+        if expression.root.type == "condition":
+            return self._compile_condition(expression.root)
+
+        if expression.root.type == "simple" and expression.root.is_multiple:
+            return self._compile_condition(expression.root.get_condition_expression())
+
+        return self._compile_single(expression.root)
+
+    def _compile_single(
+        self, schema: PredicateSchema | SimplePredicateSchema
     ) -> Predicate[Any, Any]:
-        if isinstance(expression, ConditionExpressionSchema):
-            return self._compile_condition(expression)
-
-        return self._compile_single(expression)
-
-    def _compile_single(self, schema: PredicateSchema) -> Predicate[Any, Any]:
         predicate = self._rules[schema.name](*schema.args, **schema.kwargs)
 
         if schema.inverse:
@@ -42,7 +45,7 @@ class PredicateCompiler:
             predicate = ~predicate
 
         for condition in schema.expressions:
-            compiled_predicate = self.compile(condition)
+            compiled_predicate = self.compile(ExpressionSchema(root=condition))
 
             if schema.operator == "and":
                 predicate &= compiled_predicate
