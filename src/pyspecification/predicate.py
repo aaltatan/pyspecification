@@ -1,6 +1,5 @@
-from collections.abc import Callable, Sequence
-from functools import wraps
-from typing import Any, Concatenate, Protocol
+from collections.abc import Callable
+from typing import Any, Protocol
 
 
 class ReturnType(Protocol):
@@ -10,6 +9,13 @@ class ReturnType(Protocol):
 
 
 class Predicate[T, R: ReturnType]:
+    """A predicate is a function that takes an object of type `T` and returns a boolean value.
+
+    Attributes:
+        fn: The function that implements the predicate.
+
+    """
+
     def __init__(self, fn: Callable[[T], R]) -> None:
         self._fn = fn
 
@@ -24,33 +30,3 @@ class Predicate[T, R: ReturnType]:
 
     def __invert__(self) -> "Predicate[T, R]":
         return Predicate(lambda obj: ~self(obj))
-
-
-def object_rule[T, R: ReturnType, **P](
-    fn: Callable[Concatenate[T, P], R],
-) -> Callable[P, Predicate[T, R]]:
-    @wraps(fn)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-        return Predicate(lambda obj: fn(obj, *args, **kwargs))
-
-    return wrapper
-
-
-def dictionary_rule[T: dict, K, R: ReturnType, **P](
-    fn: Callable[Concatenate[T, K, P], R],
-) -> Callable[Concatenate[K, P], Predicate[T, R]]:
-    @wraps(fn)
-    def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-        return Predicate(lambda obj: fn(obj, key, *args, **kwargs))
-
-    return wrapper
-
-
-def sequence_rule[T: Sequence, R: ReturnType, **P](
-    fn: Callable[Concatenate[T, int, P], R],
-) -> Callable[Concatenate[int, P], Predicate[T, R]]:
-    @wraps(fn)
-    def wrapper(idx: int, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-        return Predicate(lambda obj: fn(obj, idx, *args, **kwargs))
-
-    return wrapper

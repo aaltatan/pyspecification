@@ -1,10 +1,11 @@
 from .compilers import PredicateCompiler
-from .predicate import Predicate, dictionary_rule, object_rule, sequence_rule
+from .predicate import Predicate
 from .registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from .registry.schema import get_rules_schema
 from .registry.types.dict import DictPredicateRegistry
 from .registry.types.object import ObjectPredicateRegistry
 from .registry.types.sequence import SequencePredicateRegistry
+from .rules import dictionary_rule, object_rule, sequence_rule
 from .schemas import ExpressionSchema
 
 __all__ = [

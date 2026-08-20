@@ -2,9 +2,10 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from pyspecification.predicate import Predicate, ReturnType, dictionary_rule
+from pyspecification.predicate import Predicate, ReturnType
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from pyspecification.registry.processors import ProcessFn, process_arguments, process_rule_name
+from pyspecification.rules import dictionary_rule
 
 type RuleDefinitionFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[T, K, P], R]
 type RuleFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[K, P], Predicate[T, R]]

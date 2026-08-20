@@ -2,9 +2,10 @@ from collections.abc import Callable, Sequence
 from functools import wraps
 from typing import Concatenate
 
-from pyspecification.predicate import Predicate, ReturnType, sequence_rule
+from pyspecification.predicate import Predicate, ReturnType
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from pyspecification.registry.processors import ProcessFn, process_arguments, process_rule_name
+from pyspecification.rules import sequence_rule
 
 type RuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, int, P], R]
 type RuleFn[T, R: ReturnType, **P] = Callable[Concatenate[int, P], Predicate[T, R]]
