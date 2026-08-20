@@ -9,24 +9,24 @@ class ReturnType(Protocol):
 
 
 class Predicate[T, R: ReturnType]:
-    """A predicate is a function that takes an object of type `T` and returns a boolean value.
-
-    Attributes:
-        fn: The function that implements the predicate.
-
-    """
-
-    def __init__(self, fn: Callable[[T], R]) -> None:
+    def __init__(self, fn: Callable[[T], R], description: str | None = None) -> None:
         self._fn = fn
+        self._description = description
 
     def __call__(self, obj: T) -> R:
         return self._fn(obj)
 
+    def __str__(self) -> str:
+        return self._description or self._fn.__name__ or "Predicate"
+
+    def __repr__(self) -> str:
+        return f"Predicate({self})"
+
     def __and__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
-        return Predicate(lambda obj: self(obj) and other(obj))
+        return Predicate(lambda obj: self(obj) & other(obj), f"({self} & {other})")
 
     def __or__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
-        return Predicate(lambda obj: self(obj) or other(obj))
+        return Predicate(lambda obj: self(obj) | other(obj), f"({self} | {other})")
 
     def __invert__(self) -> "Predicate[T, R]":
-        return Predicate(lambda obj: not self(obj)) # type: ignore  # noqa: PGH003
+        return Predicate(lambda obj: ~self(obj), f"(~ {self})")
