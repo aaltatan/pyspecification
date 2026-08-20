@@ -23,10 +23,10 @@ class Predicate[T, R: ReturnType]:
         return self._fn(obj)
 
     def __and__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
-        return Predicate(lambda obj: self(obj) & other(obj))
+        return Predicate(lambda obj: self(obj) and other(obj))
 
     def __or__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
-        return Predicate(lambda obj: self(obj) | other(obj))
+        return Predicate(lambda obj: self(obj) or other(obj))
 
     def __invert__(self) -> "Predicate[T, R]":
-        return Predicate(lambda obj: ~self(obj))
+        return Predicate(lambda obj: not self(obj)) # type: ignore  # noqa: PGH003
