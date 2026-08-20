@@ -23,9 +23,6 @@ class PredicateCompiler:
         if expression.root.type == "condition":
             return self._compile_condition(expression.root)
 
-        if expression.root.type == "simple" and expression.root.is_multiple:
-            return self._compile_condition(expression.root.get_condition_expression())
-
         return self._compile_single(expression.root)
 
     def _compile_single(

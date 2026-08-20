@@ -10,14 +10,11 @@ from pydantic import (
     model_validator,
 )
 
+from pyspecification.constants import RESERVED_WORDS
 from pyspecification.validators import validate_python_vars_fn_naming_convention
 
 
 class SimplePredicateSchema(RootModel[dict[str, Any]]):
-    @property
-    def is_multiple(self) -> bool:
-        return len(self.root) > 1
-
     @computed_field
     @property
     def type(self) -> Literal["simple"]:
@@ -26,38 +23,34 @@ class SimplePredicateSchema(RootModel[dict[str, Any]]):
     @computed_field
     @property
     def name(self) -> str:
-        return self._name.removeprefix("-")
+        return _parse_name(self._name)
 
     @computed_field
     @property
     def inverse(self) -> bool:
-        return self._name.startswith("-")
+        return _parse_inverse(self._name)
 
     @computed_field
     @property
     def args(self) -> list[Any]:
-        if isinstance(self._value, list):
-            return self._value
-
-        if self._value is None or isinstance(self._value, dict):
-            return []
-
-        return [self._value]
+        return _parse_args(self._value)
 
     @computed_field
     @property
     def kwargs(self) -> dict[str, Any]:
-        return self._value if isinstance(self._value, dict) else {}
-
-    def get_condition_expression(self) -> "ConditionExpressionSchema":
-        return ConditionExpressionSchema(
-            expressions=[SimplePredicateSchema({key: value}) for key, value in self.root.items()],
-        )
+        return _parse_kwargs(self._value)
 
     @model_validator(mode="after")
     def validate_naming_convention(self) -> Self:
+        if len(self.root) > 1:
+            msg = "Simple predicates can only have one key"
+            raise ValueError(msg)
+
         validate_python_vars_fn_naming_convention(self.name)
-        [validate_python_vars_fn_naming_convention(value) for value in self.kwargs]
+
+        for key in self.kwargs:
+            validate_python_vars_fn_naming_convention(key)
+
         return self
 
     @property
@@ -80,7 +73,9 @@ class PredicateSchema(BaseModel):
     @field_validator("kwargs", mode="after")
     @classmethod
     def _validate_kwargs(cls, v: dict[str, Any]) -> dict[str, Any]:
-        [validate_python_vars_fn_naming_convention(name) for name in v]
+        for key in v:
+            validate_python_vars_fn_naming_convention(key)
+
         return v
 
 
@@ -91,9 +86,58 @@ class ConditionExpressionSchema(BaseModel):
     inverse: bool = False
     expressions: list["ExpressionType"] = Field(min_length=1)
 
+    @model_validator(mode="before")
+    @classmethod
+    def parse_simple_multiple_keys_predicate(cls, data: dict[str, Any]) -> dict[str, Any]:
+        if (
+            isinstance(data, dict)
+            and not any(key in RESERVED_WORDS for key in data)
+            and len(data) > 1
+        ):
+            return {
+                "operator": "and",
+                "inverse": False,
+                "expressions": [
+                    {
+                        "name": _parse_name(key),
+                        "inverse": _parse_inverse(key),
+                        "args": _parse_args(value),
+                        "kwargs": _parse_kwargs(value),
+                    }
+                    for key, value in data.items()
+                ],
+            }
 
-ExpressionType = ConditionExpressionSchema | PredicateSchema | SimplePredicateSchema
+        return data
+
+
+ExpressionType = Annotated[
+    ConditionExpressionSchema | PredicateSchema | SimplePredicateSchema,
+    Field(union_mode="left_to_right"),
+]
 
 
 class ExpressionSchema(RootModel[ExpressionType]):
     pass
+
+
+def _parse_name(name: str) -> str:
+    return name.removeprefix("-")
+
+
+def _parse_inverse(name: str) -> bool:
+    return name.startswith("-")
+
+
+def _parse_args(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+
+    if value is None or isinstance(value, dict):
+        return []
+
+    return [value]
+
+
+def _parse_kwargs(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
