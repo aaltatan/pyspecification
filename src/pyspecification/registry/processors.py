@@ -1,22 +1,6 @@
 from collections.abc import Callable
 from typing import Any
 
-from pyspecification.constants import RESERVED_WORDS
-from pyspecification.validators import validate_python_vars_fn_naming_convention
-
-
-def process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
-    rule_name = name or fn.__name__
-
-    if rule_name.lower() in RESERVED_WORDS:
-        msg = f"Rule name '{rule_name}' is reserved"
-        raise ValueError(msg)
-
-    validate_python_vars_fn_naming_convention(rule_name)
-
-    return rule_name
-
-
 type ProcessFn = Callable[[Any], Any]
 
 
