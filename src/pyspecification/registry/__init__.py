@@ -1,14 +1,12 @@
 from .exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from .schema import get_rules_schema
-from .types.dict import DictPredicateRegistry
+from .types.dict import SubscriptablePredicateRegistry
 from .types.object import ObjectPredicateRegistry
-from .types.sequence import SequencePredicateRegistry
 
 __all__ = [
-    "DictPredicateRegistry",
     "ObjectPredicateRegistry",
     "RuleAlreadyRegisteredError",
     "RuleNotRegisteredError",
-    "SequencePredicateRegistry",
+    "SubscriptablePredicateRegistry",
     "get_rules_schema",
 ]

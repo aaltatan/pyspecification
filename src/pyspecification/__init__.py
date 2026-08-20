@@ -1,27 +1,24 @@
 from .compilers import PredicateCompiler
 from .predicate import Predicate
 from .registry import (
-    DictPredicateRegistry,
     ObjectPredicateRegistry,
     RuleAlreadyRegisteredError,
     RuleNotRegisteredError,
-    SequencePredicateRegistry,
+    SubscriptablePredicateRegistry,
     get_rules_schema,
 )
-from .rules import dictionary_rule, object_rule, sequence_rule
+from .rules import object_rule, subscriptable_rule
 from .schemas import ExpressionSchema
 
 __all__ = [
-    "DictPredicateRegistry",
     "ExpressionSchema",
     "ObjectPredicateRegistry",
     "Predicate",
     "PredicateCompiler",
     "RuleAlreadyRegisteredError",
     "RuleNotRegisteredError",
-    "SequencePredicateRegistry",
-    "dictionary_rule",
+    "SubscriptablePredicateRegistry",
     "get_rules_schema",
     "object_rule",
-    "sequence_rule",
+    "subscriptable_rule",
 ]

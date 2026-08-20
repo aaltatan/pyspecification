@@ -1,17 +1,21 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from functools import wraps
 from typing import Concatenate
 
 from pyspecification.predicate import Predicate, ReturnType
 from pyspecification.registry.exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
 from pyspecification.registry.processors import ProcessFn, process_arguments, process_rule_name
-from pyspecification.rules import dictionary_rule
+from pyspecification.rules import subscriptable_rule
 
-type RuleDefinitionFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[T, K, P], R]
-type RuleFn[T: dict, K, R: ReturnType, **P] = Callable[Concatenate[K, P], Predicate[T, R]]
+type RuleDefinitionFn[T: (dict, Sequence), K, R: ReturnType, **P] = Callable[
+    Concatenate[T, K, P], R
+]
+type RuleFn[T: (dict, Sequence), K, R: ReturnType, **P] = Callable[
+    Concatenate[K, P], Predicate[T, R]
+]
 
 
-class DictPredicateRegistry[T: dict, K, R: ReturnType]:
+class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
     def __init__(self) -> None:
         self._rules: dict[str, RuleFn[T, K, R, ...]] = {}
 
@@ -74,7 +78,7 @@ class DictPredicateRegistry[T: dict, K, R: ReturnType]:
             processed_args, processed_kwargs = process_arguments(
                 args, kwargs, args_process_fn=args_process_fn, kwargs_process_fns=kwargs_process_fns
             )
-            return dictionary_rule(fn)(key, *processed_args, **processed_kwargs)
+            return subscriptable_rule(fn)(key, *processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
 
