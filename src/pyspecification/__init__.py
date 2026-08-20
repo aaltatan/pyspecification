@@ -1,5 +1,5 @@
 from .compilers import PredicateCompiler
-from .predicate import Predicate
+from .core import Predicate
 from .registry import (
     ObjectPredicateRegistry,
     RuleAlreadyRegisteredError,

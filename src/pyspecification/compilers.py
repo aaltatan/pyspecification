@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from .predicate import Predicate
+from .core import Predicate
 from .schemas import (
     ExpressionSchema,
     ExpressionsWrapperSchema,
