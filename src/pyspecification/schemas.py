@@ -79,8 +79,8 @@ class PredicateSchema(BaseModel):
         return v
 
 
-class ConditionExpressionSchema(BaseModel):
-    type: Literal["condition"] = "condition"
+class ExpressionsWrapperSchema(BaseModel):
+    type: Literal["wrapper"] = "wrapper"
 
     operator: Literal["and", "or"] = "and"
     inverse: bool = False
@@ -97,22 +97,14 @@ class ConditionExpressionSchema(BaseModel):
             return {
                 "operator": "and",
                 "inverse": False,
-                "expressions": [
-                    {
-                        "name": _parse_name(key),
-                        "inverse": _parse_inverse(key),
-                        "args": _parse_args(value),
-                        "kwargs": _parse_kwargs(value),
-                    }
-                    for key, value in data.items()
-                ],
+                "expressions": [{key: value} for key, value in data.items()],
             }
 
         return data
 
 
 ExpressionType = Annotated[
-    ConditionExpressionSchema | PredicateSchema | SimplePredicateSchema,
+    ExpressionsWrapperSchema | PredicateSchema | SimplePredicateSchema,
     Field(union_mode="left_to_right"),
 ]
 
