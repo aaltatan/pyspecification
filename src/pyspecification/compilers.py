@@ -1,52 +1,59 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal, TypedDict
 
-from .core import Predicate
-from .schemas import (
-    ExpressionSchema,
-    ExpressionsWrapperSchema,
-    PredicateSchema,
-    SimplePredicateSchema,
-)
+from .predicate import Predicate
+
+type ExpressionDict = ExpressionWrapperDict | PredicateDict
+
+
+class PredicateDict(TypedDict):
+    name: str
+    args: list[Any]
+    kwargs: dict[str, Any]
+    inverse: bool
+
+
+class ExpressionWrapperDict(TypedDict):
+    operator: Literal["and", "or"]
+    expressions: list["ExpressionWrapperDict | PredicateDict"]
+    inverse: bool
 
 
 class PredicateCompiler:
     def __init__(
         self,
         rules: dict[str, Callable[..., Predicate[Any, Any]]],
-        initial_predicate_factory: Callable[[ExpressionsWrapperSchema], Predicate[Any, Any]],
+        initial_predicate_factory: Callable[[ExpressionWrapperDict], Predicate[Any, Any]],
     ) -> None:
         self._rules = rules
         self._initial_predicate_factory = initial_predicate_factory
 
-    def compile(self, expression: ExpressionSchema) -> Predicate[Any, Any]:
-        if expression.root.type == "wrapper":
-            return self._compile_wrapper(expression.root)
+    def compile(self, expression: ExpressionDict) -> Predicate[Any, Any]:
+        if "expressions" in expression:
+            return self._compile_wrapper(expression)
 
-        return self._compile_single(expression.root)
+        return self._compile_single(expression)
 
-    def _compile_single(
-        self, schema: PredicateSchema | SimplePredicateSchema
-    ) -> Predicate[Any, Any]:
-        predicate = self._rules[schema.name](*schema.args, **schema.kwargs)
+    def _compile_single(self, single: PredicateDict) -> Predicate[Any, Any]:
+        predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
 
-        if schema.inverse:
+        if single["inverse"]:
             predicate = ~predicate
 
         return predicate
 
-    def _compile_wrapper(self, schema: ExpressionsWrapperSchema) -> Predicate[Any, Any]:
-        predicate = self._initial_predicate_factory(schema)
+    def _compile_wrapper(self, wrapper: ExpressionWrapperDict) -> Predicate[Any, Any]:
+        predicate = self._initial_predicate_factory(wrapper)
 
-        for expression in schema.expressions:
-            compiled_predicate = self.compile(ExpressionSchema(expression))
+        for expression in wrapper["expressions"]:
+            compiled_predicate = self.compile(expression)
 
-            if schema.operator == "and":
+            if wrapper["operator"] == "and":
                 predicate &= compiled_predicate
             else:
                 predicate |= compiled_predicate
 
-        if schema.inverse:
+        if wrapper["inverse"]:
             predicate = ~predicate
 
         return predicate

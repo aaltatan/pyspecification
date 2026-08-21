@@ -7,6 +7,7 @@ from pydantic import (
     RootModel,
     computed_field,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -58,6 +59,15 @@ class SimplePredicateSchema(RootModel[dict[str, Any]]):
             validate_python_vars_fn_naming_convention(key)
 
         return self
+
+    @model_serializer(when_used="always")
+    def serialize(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "args": self.args,
+            "kwargs": self.kwargs,
+            "inverse": self.inverse,
+        }
 
     @property
     def _name(self) -> str:
