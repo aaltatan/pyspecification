@@ -1,4 +1,4 @@
-from .compilers import PredicateCompiler
+from .compilers import ExpressionWrapperDict, PredicateCompiler, PredicateDict
 from .json_schema import get_json_schema
 from .predicate import Predicate
 from .registry import (
@@ -12,9 +12,11 @@ from .schemas import ExpressionSchema
 
 __all__ = [
     "ExpressionSchema",
+    "ExpressionWrapperDict",
     "ObjectPredicateRegistry",
     "Predicate",
     "PredicateCompiler",
+    "PredicateDict",
     "RuleAlreadyRegisteredError",
     "RuleNotRegisteredError",
     "SubscriptablePredicateRegistry",
