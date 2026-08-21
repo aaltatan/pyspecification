@@ -57,6 +57,7 @@ def object_rule[T, R: ReturnType, **P](
 
     @wraps(fn)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
+
         @wraps(fn)
         def inner(obj: T) -> R:
             return fn(obj, *args, **kwargs)
@@ -104,6 +105,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
     @wraps(fn)
     def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
+
         @wraps(fn)
         def inner(obj: T) -> R:
             return fn(obj, key, *args, **kwargs)
