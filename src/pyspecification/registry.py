@@ -2,10 +2,10 @@ from collections.abc import Callable, Sequence
 from functools import wraps
 from typing import Any, Concatenate
 
-from pyspecification.constants import RESERVED_WORDS
-from pyspecification.predicate import Predicate, ReturnType
-from pyspecification.rules import object_rule, subscriptable_rule
-from pyspecification.validators import validate_python_vars_fn_naming_convention
+from .constants import RESERVED_WORDS
+from .predicate import Predicate, ReturnType
+from .rules import object_rule, subscriptable_rule
+from .validators import validate_python_vars_fn_naming_convention
 
 # -----------------------
 # models

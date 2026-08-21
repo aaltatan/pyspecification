@@ -11,8 +11,8 @@ from pydantic import (
     model_validator,
 )
 
-from pyspecification.constants import RESERVED_WORDS
-from pyspecification.validators import validate_python_vars_fn_naming_convention
+from .constants import RESERVED_WORDS
+from .validators import validate_python_vars_fn_naming_convention
 
 
 class SimplePredicateSchema(RootModel[dict[str, Any]]):
