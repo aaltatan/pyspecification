@@ -1,3 +1,5 @@
+# ruff: noqa: PGH003
+
 from collections.abc import Callable
 from typing import Any, Protocol
 
@@ -16,17 +18,17 @@ class Predicate[T, R: ReturnType]:
     def __call__(self, obj: T) -> R:
         return self._fn(obj)
 
+    def __and__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
+        return Predicate(lambda obj: self(obj) and other(obj), f"({self} & {other})")
+
+    def __or__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
+        return Predicate(lambda obj: self(obj) or other(obj), f"({self} | {other})")
+
+    def __invert__(self) -> "Predicate[T, R]":
+        return Predicate(lambda obj: not self(obj), f"(~ {self})")  # type: ignore
+
     def __str__(self) -> str:
         return self._description or self._fn.__name__ or "Predicate"
 
     def __repr__(self) -> str:
         return f"Predicate({self})"
-
-    def __and__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
-        return Predicate(lambda obj: self(obj) & other(obj), f"({self} & {other})")
-
-    def __or__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
-        return Predicate(lambda obj: self(obj) | other(obj), f"({self} | {other})")
-
-    def __invert__(self) -> "Predicate[T, R]":
-        return Predicate(lambda obj: ~self(obj), f"(~ {self})")

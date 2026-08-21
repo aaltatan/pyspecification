@@ -23,22 +23,28 @@ class SimplePredicateSchema(RootModel[dict[str, Any]]):
     @computed_field
     @property
     def name(self) -> str:
-        return _parse_name(self._name)
+        return self._name.removeprefix("-")
 
     @computed_field
     @property
     def inverse(self) -> bool:
-        return _parse_inverse(self._name)
+        return self._name.startswith("-")
 
     @computed_field
     @property
     def args(self) -> list[Any]:
-        return _parse_args(self._value)
+        if isinstance(self._value, list):
+            return self._value
+
+        if self._value is None or isinstance(self._value, dict):
+            return []
+
+        return [self._value]
 
     @computed_field
     @property
     def kwargs(self) -> dict[str, Any]:
-        return _parse_kwargs(self._value)
+        return self._value if isinstance(self._value, dict) else {}
 
     @model_validator(mode="after")
     def validate_naming_convention(self) -> Self:
@@ -111,25 +117,3 @@ ExpressionType = Annotated[
 
 class ExpressionSchema(RootModel[ExpressionType]):
     pass
-
-
-def _parse_name(name: str) -> str:
-    return name.removeprefix("-")
-
-
-def _parse_inverse(name: str) -> bool:
-    return name.startswith("-")
-
-
-def _parse_args(value: Any) -> list[Any]:
-    if isinstance(value, list):
-        return value
-
-    if value is None or isinstance(value, dict):
-        return []
-
-    return [value]
-
-
-def _parse_kwargs(value: Any) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
