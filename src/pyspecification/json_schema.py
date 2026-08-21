@@ -11,11 +11,5 @@ def get_json_schema(rule: Callable[..., Any]) -> dict[str, Any]:
         for idx, (arg, typ) in enumerate(get_annotations(rule).items())
         if idx > 0
     }
-
     return_dict = schema.pop("return", {})
-
-    return {
-        "arguments": schema,
-        "return": return_dict,
-        "description": rule.__doc__ or "",
-    }
+    return {"arguments": schema, "return": return_dict, "description": rule.__doc__ or ""}
