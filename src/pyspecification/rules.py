@@ -2,7 +2,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from .core import Predicate, ReturnType
+from .predicate import Predicate, ReturnType
 
 
 def object_rule[T, R: ReturnType, **P](

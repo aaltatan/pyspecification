@@ -1,6 +1,6 @@
 from .compilers import PredicateCompiler
-from .core import Predicate
 from .json_schema import get_json_schema
+from .predicate import Predicate
 from .registry import (
     ObjectPredicateRegistry,
     RuleAlreadyRegisteredError,

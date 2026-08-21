@@ -3,7 +3,7 @@ from functools import wraps
 from typing import Any, Concatenate
 
 from pyspecification.constants import RESERVED_WORDS
-from pyspecification.core import Predicate, ReturnType
+from pyspecification.predicate import Predicate, ReturnType
 from pyspecification.rules import object_rule, subscriptable_rule
 from pyspecification.validators import validate_python_vars_fn_naming_convention
 
