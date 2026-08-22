@@ -1,11 +1,16 @@
 from typing import Any
 
 import pytest
-from pyspecification.schemas import PredicateSchema, SimplePredicateSchema
+from pyspecification.schemas import (
+    ExpressionSchema,
+    ExpressionsWrapperSchema,
+    PredicateSchema,
+    SimplePredicateSchema,
+)
 
 
 @pytest.mark.parametrize(
-    "simple_form, data",
+    "simple_predicate_data, predicate_data",
     [
         (
             {"_is_true": None},
@@ -45,20 +50,16 @@ from pyspecification.schemas import PredicateSchema, SimplePredicateSchema
         ),
     ],
 )
-def test_predicate_schema(simple_form: dict[str, Any], data: dict[str, Any]) -> None:
-    simple = SimplePredicateSchema(simple_form)
+def test_predicate_schema(
+    simple_predicate_data: dict[str, Any], predicate_data: dict[str, Any]
+) -> None:
+    simple_predicate = SimplePredicateSchema(simple_predicate_data)
+    predicate = PredicateSchema(**predicate_data)
 
-    assert simple.name == data["name"]
-    assert simple.args == data["args"]
-    assert simple.kwargs == data["kwargs"]
-    assert simple.inverse == data["inverse"]
-
-    regular = PredicateSchema(**data)
-
-    assert regular.name == data["name"]
-    assert regular.args == data["args"]
-    assert regular.kwargs == data["kwargs"]
-    assert regular.inverse == data["inverse"]
+    assert simple_predicate.name == predicate.name == predicate_data["name"]
+    assert simple_predicate.args == predicate.args == predicate_data["args"]
+    assert simple_predicate.kwargs == predicate.kwargs == predicate_data["kwargs"]
+    assert simple_predicate.inverse == predicate.inverse == predicate_data["inverse"]
 
 
 @pytest.mark.parametrize(
@@ -78,3 +79,53 @@ def test_predicate_schema(simple_form: dict[str, Any], data: dict[str, Any]) -> 
 def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
         PredicateSchema(**schema_dict)
+
+
+@pytest.mark.parametrize(
+    "expression_dict, schema",
+    [
+        (
+            {
+                "expressions": [
+                    {"name__len_le": 10},
+                    {"name": "name__contains", "args": ["Abdullah"]},
+                    {"name": "name__startswith", "kwargs": {"value": "Abdullah"}},
+                    {"age__gt": 18, "is_admin": True},
+                    {
+                        "operator": "or",
+                        "inverse": True,
+                        "expressions": [
+                            {"name": "age__gt", "args": [18]},
+                            {"name": "is_admin", "args": [True]},
+                        ],
+                    },
+                ]
+            },
+            ExpressionSchema(
+                ExpressionsWrapperSchema(
+                    expressions=[
+                        SimplePredicateSchema({"name__len_le": 10}),
+                        PredicateSchema(name="name__contains", args=["Abdullah"]),
+                        PredicateSchema(name="name__startswith", kwargs={"value": "Abdullah"}),
+                        ExpressionsWrapperSchema(
+                            expressions=[
+                                SimplePredicateSchema({"age__gt": 18}),
+                                SimplePredicateSchema({"is_admin": True}),
+                            ]
+                        ),
+                        ExpressionsWrapperSchema(
+                            operator="or",
+                            inverse=True,
+                            expressions=[
+                                PredicateSchema(name="age__gt", args=[18]),
+                                PredicateSchema(name="is_admin", args=[True]),
+                            ],
+                        ),
+                    ]
+                )
+            ),
+        )
+    ],
+)
+def test_expression_schema(expression_dict: dict[str, Any], schema: ExpressionSchema) -> None:
+    assert ExpressionSchema(**expression_dict) == schema
