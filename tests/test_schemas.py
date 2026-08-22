@@ -63,6 +63,59 @@ def test_predicate_schema(
 
 
 @pytest.mark.parametrize(
+    "predicate, dumped",
+    (
+        [
+            (
+                {
+                    "expressions": [
+                        {"name__len_le": 10},
+                        {"-name__len_le": 10},
+                        {"name": "name__contains", "args": ["Abdullah"]},
+                    ]
+                },
+                {
+                    "operator": "and",
+                    "inverse": False,
+                    "expressions": [
+                        {
+                            "name": "name__len_le",
+                            "inverse": False,
+                            "args": [10],
+                            "kwargs": {},
+                        },
+                        {
+                            "name": "name__len_le",
+                            "inverse": True,
+                            "args": [10],
+                            "kwargs": {},
+                        },
+                        {
+                            "name": "name__contains",
+                            "inverse": False,
+                            "args": ["Abdullah"],
+                            "kwargs": {},
+                        },
+                    ],
+                },
+            )
+        ]
+    ),
+)
+def test_expression_schema_serialization(predicate: dict[str, Any], dumped: dict[str, Any]) -> None:
+    assert ExpressionSchema(**predicate).model_dump() == dumped
+
+
+def test_simple_predicate() -> None:
+    assert SimplePredicateSchema({"name": "is_true"}).type == "simple"
+
+
+def test_error_when_simple_predicate_has_multiple_keys() -> None:
+    with pytest.raises(ValueError):
+        SimplePredicateSchema({"is_admin": True, "name__startswith": "admin"})
+
+
+@pytest.mark.parametrize(
     "schema_dict",
     [
         {"name": "1is_true"},

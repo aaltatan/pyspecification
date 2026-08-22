@@ -42,28 +42,68 @@ def compiler() -> PredicateCompiler:
 
 
 @pytest.mark.parametrize(
-    "user, rule_dict, predicate",
+    "users, rule_dict, predicate",
     [
         (
-            User(name="Abdullah", age=18, is_admin=True),
+            [User(name="Abdullah", age=18, is_admin=True)],
             {"is_admin": []},
             is_admin(),
         ),
         (
-            User(name="admin", age=18, is_admin=True),
+            [User(name="Abdullah", age=18, is_admin=False)],
+            {"-is_admin": []},
+            ~is_admin(),
+        ),
+        (
+            [User(name="admin", age=18, is_admin=True)],
             {
                 "name__istartswith": ["admin"],
                 "age__between": [18, 30],
             },
             name__istartswith("admin") & age__between(18, 30),
         ),
+        (
+            [
+                User(name="Abdullah", age=16, is_admin=True),
+                User(name="admin", age=20, is_admin=False),
+            ],
+            {
+                "operator": "or",
+                "expressions": [
+                    {"is_admin": []},
+                    {
+                        "name__istartswith": ["admin"],
+                        "age__between": [18, 30],
+                    },
+                ],
+            },
+            is_admin() | (name__istartswith("admin") & age__between(18, 30)),
+        ),
+        (
+            [
+                User(name="Abdullah", age=16, is_admin=True),
+                User(name="admin", age=20, is_admin=False),
+            ],
+            {
+                "operator": "or",
+                "inverse": True,
+                "expressions": [
+                    {"is_admin": []},
+                    {
+                        "name__istartswith": ["admin"],
+                        "age__between": [18, 30],
+                    },
+                ],
+            },
+            ~(is_admin() | (name__istartswith("admin") & age__between(18, 30))),
+        ),
     ],
 )
 def test_compiler(
-    user: User,
+    users: list[User],
     rule_dict: dict[str, Any],
     predicate: Predicate[Any, Any],
     compiler: PredicateCompiler,
 ) -> None:
     compiled_predicate = compiler.compile(ExpressionSchema(**rule_dict).model_dump())
-    assert compiled_predicate(user) == predicate(user)
+    assert all(compiled_predicate(user) for user in users) == all(predicate(user) for user in users)

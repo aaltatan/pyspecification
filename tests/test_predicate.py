@@ -11,16 +11,31 @@ class User:
     is_admin: bool = True
 
 
-is_admin: Predicate[User, bool] = Predicate(lambda user: user.is_admin is True)
-name__istartswith_admin: Predicate[User, bool] = Predicate(
-    lambda user: user.name.lower().startswith("admin")
-)
-age__between_18_and_30: Predicate[User, bool] = Predicate(
-    lambda user: user.age >= 18 and user.age <= 30
-)
+def _is_admin(user: User) -> bool:
+    return user.is_admin is True
 
 
-rule = is_admin | (name__istartswith_admin & age__between_18_and_30)
+def _name__istartswith_admin(user: User) -> bool:
+    return user.name.lower().startswith("admin")
+
+
+def _age__between_18_and_30(user: User) -> bool:
+    return user.age >= 18 and user.age <= 30
+
+
+is_admin: Predicate[User, bool] = Predicate(_is_admin)
+name__istartswith_admin: Predicate[User, bool] = Predicate(_name__istartswith_admin)
+age__between_18_and_30: Predicate[User, bool] = Predicate(_age__between_18_and_30)
+
+
+rule = is_admin | (name__istartswith_admin & age__between_18_and_30 & ~is_admin)
+
+
+def test_predicate_repr() -> None:
+    assert (
+        repr(rule)
+        == "Predicate((_is_admin | ((_name__istartswith_admin & _age__between_18_and_30) & ~_is_admin)))"  # noqa: E501
+    )
 
 
 @pytest.mark.parametrize(
