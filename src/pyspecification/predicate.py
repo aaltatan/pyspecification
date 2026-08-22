@@ -25,7 +25,7 @@ class Predicate[T, R: ReturnType]:
         return Predicate(lambda obj: self(obj) or other(obj), f"({self} | {other})")
 
     def __invert__(self) -> "Predicate[T, R]":
-        return Predicate(lambda obj: not self(obj), f"(~ {self})")  # type: ignore
+        return Predicate(lambda obj: not self(obj), f"~{self}")  # type: ignore
 
     def __str__(self) -> str:
         return self._description or self._fn.__name__ or "Predicate"
