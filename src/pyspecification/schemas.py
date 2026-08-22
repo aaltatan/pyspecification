@@ -16,7 +16,7 @@ from .validators import validate_python_vars_fn_naming_convention
 
 
 class SimplePredicateSchema(RootModel[dict[str, Any]]):
-    @computed_field
+    @computed_field(exclude_if=lambda _: True)
     @property
     def type(self) -> Literal["simple"]:
         return "simple"
@@ -64,9 +64,9 @@ class SimplePredicateSchema(RootModel[dict[str, Any]]):
     def serialize(self) -> dict[str, Any]:
         return {
             "name": self.name,
+            "inverse": self.inverse,
             "args": self.args,
             "kwargs": self.kwargs,
-            "inverse": self.inverse,
         }
 
     @property
@@ -79,7 +79,7 @@ class SimplePredicateSchema(RootModel[dict[str, Any]]):
 
 
 class PredicateSchema(BaseModel):
-    type: Literal["predicate"] = "predicate"
+    type: Annotated[Literal["predicate"], Field(exclude=True)] = "predicate"
 
     name: Annotated[str, AfterValidator(validate_python_vars_fn_naming_convention)]
     inverse: bool = False
@@ -96,7 +96,7 @@ class PredicateSchema(BaseModel):
 
 
 class ExpressionsWrapperSchema(BaseModel):
-    type: Literal["wrapper"] = "wrapper"
+    type: Annotated[Literal["wrapper"], Field(exclude=True)] = "wrapper"
 
     operator: Literal["and", "or"] = "and"
     inverse: bool = False
