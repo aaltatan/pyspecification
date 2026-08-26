@@ -11,7 +11,6 @@ from .validators import validate_python_vars_fn_naming_convention
 # models
 # -----------------------
 
-type ProcessFn = Callable[[Any], Any]
 
 type ObjectRuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, P], R]
 type ObjectRuleFn[T, R: ReturnType, **P] = Callable[P, Predicate[T, R]]
@@ -22,6 +21,7 @@ type SubscriptableRuleDefinitionFn[T: (dict, Sequence), K, R: ReturnType, **P] =
 type SubscriptableRuleFn[T: (dict, Sequence), K, R: ReturnType, **P] = Callable[
     Concatenate[K, P], Predicate[T, R]
 ]
+
 
 # -----------------------
 # exceptions
@@ -36,6 +36,29 @@ class RuleAlreadyRegisteredError(Exception):
 class RuleNotRegisteredError(Exception):
     def __init__(self, name: str) -> None:
         super().__init__(f"Rule '{name}' is not registered")
+
+
+# -----------------------
+# processors
+# -----------------------
+
+
+type ProcessFn = Callable[[Any], Any]
+
+
+DEFAULT_PROCESSORS: tuple[ProcessFn, dict[str, ProcessFn]] = (lambda value: value, {})
+
+
+def process_arguments(
+    processors: tuple[ProcessFn, dict[str, ProcessFn]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> tuple[tuple[Any, ...], dict[str, Any]]:
+    default_fn, processors_map = processors
+
+    return tuple(default_fn(arg) for arg in args), {
+        key: processors_map.get(key, default_fn)(value) for key, value in kwargs.items()
+    }
 
 
 # -----------------------
@@ -60,16 +83,10 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
         self,
         *,
         name: str | None = None,
-        args_process_fn: ProcessFn | None = None,
-        kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
     ) -> Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]:
         def decorator(fn: ObjectRuleDefinitionFn[T, R, P]) -> ObjectRuleFn[T, R, P]:
-            return self._register_rule(
-                fn,
-                name=name,
-                args_process_fn=args_process_fn,
-                kwargs_process_fns=kwargs_process_fns,
-            )
+            return self._register_rule(fn, name=name, processors=processors)
 
         return decorator
 
@@ -78,23 +95,16 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
         fn: ObjectRuleDefinitionFn[T, R, P],
         *,
         name: str | None = None,
-        args_process_fn: ProcessFn | None = None,
-        kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
     ) -> ObjectRuleFn[T, R, P]:
-        return self._register_rule(
-            fn,
-            name=name,
-            args_process_fn=args_process_fn,
-            kwargs_process_fns=kwargs_process_fns,
-        )
+        return self._register_rule(fn, name=name, processors=processors)
 
     def _register_rule[**P](
         self,
         fn: ObjectRuleDefinitionFn[T, R, P],
         *,
-        name: str | None = None,
-        args_process_fn: ProcessFn | None = None,
-        kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
+        name: str | None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]],
     ) -> ObjectRuleFn[T, R, P]:
         rule_name = _process_rule_name(fn, name)
 
@@ -103,12 +113,7 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
 
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            processed_args, processed_kwargs = process_arguments(
-                args,
-                kwargs,
-                args_process_fn=args_process_fn,
-                kwargs_process_fns=kwargs_process_fns,
-            )
+            processed_args, processed_kwargs = process_arguments(processors, args, kwargs)
             return object_rule(fn)(*processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
@@ -138,18 +143,12 @@ class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
         self,
         *,
         name: str | None = None,
-        args_process_fn: ProcessFn | None = None,
-        kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
     ) -> Callable[[SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]]:
         def decorator(
             fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         ) -> SubscriptableRuleFn[T, K, R, P]:
-            return self._register_rule(
-                fn,
-                name=name,
-                args_process_fn=args_process_fn,
-                kwargs_process_fns=kwargs_process_fns,
-            )
+            return self._register_rule(fn, name=name, processors=processors)
 
         return decorator
 
@@ -158,23 +157,16 @@ class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
         fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         *,
         name: str | None = None,
-        args_process_fn: ProcessFn | None = None,
-        kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
     ) -> SubscriptableRuleFn[T, K, R, P]:
-        return self._register_rule(
-            fn,
-            name=name,
-            args_process_fn=args_process_fn,
-            kwargs_process_fns=kwargs_process_fns,
-        )
+        return self._register_rule(fn, name=name, processors=processors)
 
     def _register_rule[**P](
         self,
         fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         *,
-        name: str | None = None,
-        args_process_fn: ProcessFn | None = None,
-        kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None = None,
+        name: str | None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]],
     ) -> SubscriptableRuleFn[T, K, R, P]:
         rule_name = _process_rule_name(fn, name)
 
@@ -183,19 +175,12 @@ class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
 
         @wraps(fn)
         def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            processed_args, processed_kwargs = process_arguments(
-                args, kwargs, args_process_fn=args_process_fn, kwargs_process_fns=kwargs_process_fns
-            )
+            processed_args, processed_kwargs = process_arguments(processors, args, kwargs)
             return subscriptable_rule(fn)(key, *processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
 
         return wrapper
-
-
-# -----------------------
-# processors
-# -----------------------
 
 
 def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
@@ -208,42 +193,3 @@ def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
     validate_python_vars_fn_naming_convention(rule_name)
 
     return rule_name
-
-
-def process_arguments(
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-    *,
-    args_process_fn: ProcessFn | None,
-    kwargs_process_fns: tuple[dict[str, ProcessFn], ProcessFn] | None,
-) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    processed_args = _process_args(args_process_fn, *args) if args_process_fn is not None else args
-
-    if kwargs_process_fns is None:
-        return processed_args, kwargs
-
-    process_fns, fallback_process_fn = kwargs_process_fns
-
-    processed_kwargs = _process_kwargs(process_fns, fallback_process_fn, **kwargs)
-
-    return processed_args, processed_kwargs
-
-
-def _process[T](value: T | list[T], processor: ProcessFn) -> T | list[T]:
-    return [processor(v) for v in value] if isinstance(value, list) else processor(value)
-
-
-def _process_args(processor: ProcessFn, *args: Any) -> tuple[Any, ...]:
-    return tuple(_process(arg, processor) for arg in args)
-
-
-def _process_kwargs(
-    processors: dict[str, ProcessFn], fallback_processor: ProcessFn, **kwargs: Any
-) -> dict[str, Any]:
-    processed_kwargs = {}
-
-    for key, kwarg in kwargs.items():
-        process_fn = processors.get(key, fallback_processor)
-        processed_kwargs[key] = _process(kwarg, process_fn)
-
-    return processed_kwargs
