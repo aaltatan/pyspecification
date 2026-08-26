@@ -4,6 +4,7 @@ from typing import Any, Concatenate
 
 from .constants import RESERVED_WORDS
 from .predicate import Predicate, ReturnType
+from .processors import DEFAULT_PROCESSORS, ProcessFn, process_arguments
 from .rules import object_rule, subscriptable_rule
 from .validators import validate_python_vars_fn_naming_convention
 
@@ -36,29 +37,6 @@ class RuleAlreadyRegisteredError(Exception):
 class RuleNotRegisteredError(Exception):
     def __init__(self, name: str) -> None:
         super().__init__(f"Rule '{name}' is not registered")
-
-
-# -----------------------
-# processors
-# -----------------------
-
-
-type ProcessFn = Callable[[Any], Any]
-
-
-DEFAULT_PROCESSORS: tuple[ProcessFn, dict[str, ProcessFn]] = (lambda value: value, {})
-
-
-def process_arguments(
-    processors: tuple[ProcessFn, dict[str, ProcessFn]],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    default_fn, processors_map = processors
-
-    return tuple(default_fn(arg) for arg in args), {
-        key: processors_map.get(key, default_fn)(value) for key, value in kwargs.items()
-    }
 
 
 # -----------------------
@@ -113,7 +91,7 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
 
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            processed_args, processed_kwargs = process_arguments(processors, args, kwargs)
+            processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
             return object_rule(fn)(*processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
@@ -175,7 +153,7 @@ class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
 
         @wraps(fn)
         def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            processed_args, processed_kwargs = process_arguments(processors, args, kwargs)
+            processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
             return subscriptable_rule(fn)(key, *processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
