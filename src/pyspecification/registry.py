@@ -4,6 +4,7 @@ from typing import Any, Concatenate
 
 from .constants import RESERVED_WORDS
 from .predicate import Predicate, ReturnType
+from .processors import DEFAULT_PROCESSORS, ProcessFn, process_arguments
 from .rules import object_rule, subscriptable_rule
 from .validators import validate_python_vars_fn_naming_convention
 
@@ -11,7 +12,6 @@ from .validators import validate_python_vars_fn_naming_convention
 # models
 # -----------------------
 
-type ProcessFn = Callable[[Any], Any]
 
 type ObjectRuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, P], R]
 type ObjectRuleFn[T, R: ReturnType, **P] = Callable[P, Predicate[T, R]]
@@ -22,6 +22,7 @@ type SubscriptableRuleDefinitionFn[T: (dict, Sequence), K, R: ReturnType, **P] =
 type SubscriptableRuleFn[T: (dict, Sequence), K, R: ReturnType, **P] = Callable[
     Concatenate[K, P], Predicate[T, R]
 ]
+
 
 # -----------------------
 # exceptions
@@ -60,10 +61,10 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
         self,
         *,
         name: str | None = None,
-        process_fn: ProcessFn | None = None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
     ) -> Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]:
         def decorator(fn: ObjectRuleDefinitionFn[T, R, P]) -> ObjectRuleFn[T, R, P]:
-            return self._register_rule(fn, name=name, process_fn=process_fn)
+            return self._register_rule(fn, name=name, processors=processors)
 
         return decorator
 
@@ -72,16 +73,16 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
         fn: ObjectRuleDefinitionFn[T, R, P],
         *,
         name: str | None = None,
-        process_fn: ProcessFn | None = None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
     ) -> ObjectRuleFn[T, R, P]:
-        return self._register_rule(fn, name=name, process_fn=process_fn)
+        return self._register_rule(fn, name=name, processors=processors)
 
     def _register_rule[**P](
         self,
         fn: ObjectRuleDefinitionFn[T, R, P],
         *,
-        name: str | None = None,
-        process_fn: ProcessFn | None = None,
+        name: str | None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]],
     ) -> ObjectRuleFn[T, R, P]:
         rule_name = _process_rule_name(fn, name)
 
@@ -90,7 +91,7 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
 
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            processed_args, processed_kwargs = _process_rule_arguments(process_fn, *args, **kwargs)
+            processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
             return object_rule(fn)(*processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
@@ -120,12 +121,12 @@ class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
         self,
         *,
         name: str | None = None,
-        process_fn: ProcessFn | None = None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
     ) -> Callable[[SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]]:
         def decorator(
             fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         ) -> SubscriptableRuleFn[T, K, R, P]:
-            return self._register_rule(fn, name=name, process_fn=process_fn)
+            return self._register_rule(fn, name=name, processors=processors)
 
         return decorator
 
@@ -134,16 +135,16 @@ class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
         fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         *,
         name: str | None = None,
-        process_fn: ProcessFn | None = None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
     ) -> SubscriptableRuleFn[T, K, R, P]:
-        return self._register_rule(fn, name=name, process_fn=process_fn)
+        return self._register_rule(fn, name=name, processors=processors)
 
     def _register_rule[**P](
         self,
         fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         *,
-        name: str | None = None,
-        process_fn: ProcessFn | None = None,
+        name: str | None,
+        processors: tuple[ProcessFn, dict[str, ProcessFn]],
     ) -> SubscriptableRuleFn[T, K, R, P]:
         rule_name = _process_rule_name(fn, name)
 
@@ -152,7 +153,7 @@ class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
 
         @wraps(fn)
         def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            processed_args, processed_kwargs = _process_rule_arguments(process_fn, *args, **kwargs)
+            processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
             return subscriptable_rule(fn)(key, *processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
