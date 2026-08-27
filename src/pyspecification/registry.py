@@ -161,19 +161,6 @@ class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
         return wrapper
 
 
-def _process_rule_arguments(
-    process_fn: ProcessFn | None = None,
-    *args: Any,
-    **kwargs: Any,
-) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    if process_fn:
-        return tuple([process_fn(arg) for arg in args]), {
-            key: process_fn(value) for key, value in kwargs
-        }
-
-    return args, kwargs
-
-
 def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
     rule_name = name or fn.__name__
 
