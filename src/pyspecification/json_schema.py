@@ -5,17 +5,11 @@ from typing import Any
 from pydantic import TypeAdapter
 
 
-def get_json_schema(
-    rule: Callable[..., Any],
-    *,
-    include_first_argument: bool = False,
-) -> dict[str, Any]:
+def get_json_schema(rule: Callable[..., Any]) -> dict[str, Any]:
     """Get the JSON schema for a rule.
 
     Args:
         rule (Callable): The rule to get the JSON schema for.
-        include_first_argument (bool, optional):Whether to include the first argument in the schema.
-            Defaults to False.
 
     Returns:
         dict: The JSON schema for the rule.
@@ -63,9 +57,6 @@ def get_json_schema(
     ```
 
     """
-    if include_first_argument:
-        return {arg: TypeAdapter(typ).json_schema() for arg, typ in get_annotations(rule).items()}
-
     return {
         arg: TypeAdapter(typ).json_schema()
         for idx, (arg, typ) in enumerate(get_annotations(rule).items())
