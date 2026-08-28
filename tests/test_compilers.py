@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from pyspecification import ExpressionSchema, Predicate, PredicateCompiler, object_rule
+from pyspecification import Predicate, PredicateCompiler, RuleSchema, object_rule
 
 
 @dataclass
@@ -105,5 +105,5 @@ def test_compiler(
     predicate: Predicate[Any, Any],
     compiler: PredicateCompiler,
 ) -> None:
-    compiled_predicate = compiler.compile(ExpressionSchema(**rule_dict).model_dump())
+    compiled_predicate = compiler.compile(RuleSchema(**rule_dict).model_dump())
     assert all(compiled_predicate(user) for user in users) == all(predicate(user) for user in users)

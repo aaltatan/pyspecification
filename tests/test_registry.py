@@ -3,10 +3,10 @@ from typing import Any
 
 import pytest
 from pyspecification.registry import (
-    ObjectPredicateRegistry,
+    ObjectRulesRegistry,
     RuleAlreadyRegisteredError,
     RuleNotRegisteredError,
-    SubscriptablePredicateRegistry,
+    SubscriptableRulesRegistry,
 )
 
 # -----------------------
@@ -21,13 +21,13 @@ class User:
 
 
 @pytest.fixture
-def obj_registry() -> ObjectPredicateRegistry[User, bool]:
-    return ObjectPredicateRegistry[User, bool]()
+def obj_registry() -> ObjectRulesRegistry[User, bool]:
+    return ObjectRulesRegistry[User, bool]()
 
 
 @pytest.fixture
-def sub_registry() -> SubscriptablePredicateRegistry[dict[str, Any], str, bool]:
-    return SubscriptablePredicateRegistry[dict[str, Any], str, bool]()
+def sub_registry() -> SubscriptableRulesRegistry[dict[str, Any], str, bool]:
+    return SubscriptableRulesRegistry[dict[str, Any], str, bool]()
 
 
 # -----------------------
@@ -35,7 +35,7 @@ def sub_registry() -> SubscriptablePredicateRegistry[dict[str, Any], str, bool]:
 # -----------------------
 
 
-def test_obj_registry_register_and_get(obj_registry: ObjectPredicateRegistry[User, bool]) -> None:
+def test_obj_registry_register_and_get(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     def is_adult(user: User) -> bool:
         return user.age >= 18
 
@@ -47,7 +47,7 @@ def test_obj_registry_register_and_get(obj_registry: ObjectPredicateRegistry[Use
     assert predicate(User(name="Test", age=16)) is False
 
 
-def test_obj_registry_rule_decorator(obj_registry: ObjectPredicateRegistry[User, bool]) -> None:
+def test_obj_registry_rule_decorator(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     @obj_registry.rule()
     def has_name(user: User, name: str) -> bool:
         return user.name == name
@@ -59,7 +59,7 @@ def test_obj_registry_rule_decorator(obj_registry: ObjectPredicateRegistry[User,
     assert predicate(User(name="Wrong", age=20)) is False
 
 
-def test_obj_registry_custom_name(obj_registry: ObjectPredicateRegistry[User, bool]) -> None:
+def test_obj_registry_custom_name(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     @obj_registry.rule(name="custom_is_adult")
     def is_adult(user: User) -> bool: ...
 
@@ -67,7 +67,7 @@ def test_obj_registry_custom_name(obj_registry: ObjectPredicateRegistry[User, bo
     assert "is_adult" not in obj_registry.rules
 
 
-def test_obj_registry_already_registered(obj_registry: ObjectPredicateRegistry[User, bool]) -> None:
+def test_obj_registry_already_registered(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     def rule1(_: User) -> bool: ...
     def rule2(_: User) -> bool: ...
 
@@ -79,14 +79,14 @@ def test_obj_registry_already_registered(obj_registry: ObjectPredicateRegistry[U
     assert "Rule 'same_name' is already registered" in str(exc.value)
 
 
-def test_obj_registry_not_registered(obj_registry: ObjectPredicateRegistry[User, bool]) -> None:
+def test_obj_registry_not_registered(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     with pytest.raises(RuleNotRegisteredError) as exc:
         _ = obj_registry["non_existent"]
 
     assert "Rule 'non_existent' is not registered" in str(exc.value)
 
 
-def test_obj_registry_reserved_word(obj_registry: ObjectPredicateRegistry[User, bool]) -> None:
+def test_obj_registry_reserved_word(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     def reserved_rule(_: User) -> bool: ...
 
     with pytest.raises(ValueError) as exc:
@@ -95,14 +95,14 @@ def test_obj_registry_reserved_word(obj_registry: ObjectPredicateRegistry[User, 
     assert "Rule name 'name' is reserved" in str(exc.value)
 
 
-def test_obj_registry_invalid_name(obj_registry: ObjectPredicateRegistry[User, bool]) -> None:
+def test_obj_registry_invalid_name(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     def invalid_name_rule(_: User) -> bool: ...
 
     with pytest.raises(ValueError):
         obj_registry.register_rule(invalid_name_rule, name="123_invalid")
 
 
-def test_obj_registry_processors(obj_registry: ObjectPredicateRegistry[User, bool]) -> None:
+def test_obj_registry_processors(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     def is_age(user: User, age: int) -> bool:
         return user.age == age
 
@@ -122,7 +122,7 @@ def test_obj_registry_processors(obj_registry: ObjectPredicateRegistry[User, boo
 
 
 def test_sub_registry_register_and_get(
-    sub_registry: SubscriptablePredicateRegistry[dict[str, Any], str, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     def is_true(obj: dict[str, Any], key: str) -> bool:
         return obj[key] is True
@@ -137,7 +137,7 @@ def test_sub_registry_register_and_get(
 
 
 def test_sub_registry_rule_decorator(
-    sub_registry: SubscriptablePredicateRegistry[dict[str, Any], str, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     @sub_registry.rule()
     def has_value(obj: dict[str, Any], key: str, value: Any) -> bool:
@@ -151,7 +151,7 @@ def test_sub_registry_rule_decorator(
 
 
 def test_sub_registry_custom_name(
-    sub_registry: SubscriptablePredicateRegistry[dict[str, Any], str, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     @sub_registry.rule(name="custom_is_true")
     def is_true(obj: dict[str, Any], key: str) -> bool: ...
@@ -161,7 +161,7 @@ def test_sub_registry_custom_name(
 
 
 def test_sub_registry_already_registered(
-    sub_registry: SubscriptablePredicateRegistry[dict[str, Any], str, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     def rule1(_: dict[str, Any], __: str) -> bool: ...
     def rule2(_: dict[str, Any], __: str) -> bool: ...
@@ -175,7 +175,7 @@ def test_sub_registry_already_registered(
 
 
 def test_sub_registry_not_registered(
-    sub_registry: SubscriptablePredicateRegistry[dict[str, Any], str, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     with pytest.raises(RuleNotRegisteredError) as exc:
         _ = sub_registry["non_existent"]
@@ -184,7 +184,7 @@ def test_sub_registry_not_registered(
 
 
 def test_sub_registry_reserved_word(
-    sub_registry: SubscriptablePredicateRegistry[dict[str, Any], str, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     def reserved_rule(_: dict[str, Any], __: str) -> bool: ...
 
@@ -195,7 +195,7 @@ def test_sub_registry_reserved_word(
 
 
 def test_sub_registry_invalid_name(
-    sub_registry: SubscriptablePredicateRegistry[dict[str, Any], str, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     def invalid_name_rule(_: dict[str, Any], __: str) -> bool: ...
 
@@ -204,7 +204,7 @@ def test_sub_registry_invalid_name(
 
 
 def test_sub_registry_processors(
-    sub_registry: SubscriptablePredicateRegistry[dict[str, Any], str, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     def is_age(obj: dict[str, Any], key: str, age: int) -> bool:
         return obj[key] == age

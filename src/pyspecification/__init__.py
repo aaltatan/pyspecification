@@ -2,24 +2,24 @@ from .compilers import ExpressionWrapperDict, PredicateCompiler, PredicateDict
 from .json_schema import get_json_schema
 from .predicate import Predicate
 from .registry import (
-    ObjectPredicateRegistry,
+    ObjectRulesRegistry,
     RuleAlreadyRegisteredError,
     RuleNotRegisteredError,
-    SubscriptablePredicateRegistry,
+    SubscriptableRulesRegistry,
 )
 from .rules import object_rule, subscriptable_rule
-from .schemas import ExpressionSchema
+from .schemas import RuleSchema
 
 __all__ = [
-    "ExpressionSchema",
     "ExpressionWrapperDict",
-    "ObjectPredicateRegistry",
+    "ObjectRulesRegistry",
     "Predicate",
     "PredicateCompiler",
     "PredicateDict",
     "RuleAlreadyRegisteredError",
     "RuleNotRegisteredError",
-    "SubscriptablePredicateRegistry",
+    "RuleSchema",
+    "SubscriptableRulesRegistry",
     "get_json_schema",
     "object_rule",
     "subscriptable_rule",

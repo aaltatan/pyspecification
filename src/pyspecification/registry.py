@@ -44,7 +44,7 @@ class RuleNotRegisteredError(Exception):
 # -----------------------
 
 
-class ObjectPredicateRegistry[T, R: ReturnType]:
+class ObjectRulesRegistry[T, R: ReturnType]:
     def __init__(self) -> None:
         self._rules: dict[str, ObjectRuleFn[T, R, ...]] = {}
 
@@ -104,7 +104,7 @@ class ObjectPredicateRegistry[T, R: ReturnType]:
 # -----------------------
 
 
-class SubscriptablePredicateRegistry[T: (dict, Sequence), K, R: ReturnType]:
+class SubscriptableRulesRegistry[T: (dict, Sequence), K, R: ReturnType]:
     def __init__(self) -> None:
         self._rules: dict[str, SubscriptableRuleFn[T, K, R, ...]] = {}
 

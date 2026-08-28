@@ -2,9 +2,9 @@ from typing import Any
 
 import pytest
 from pyspecification.schemas import (
-    ExpressionSchema,
     ExpressionsWrapperSchema,
     PredicateSchema,
+    RuleSchema,
     SimplePredicateSchema,
 )
 
@@ -103,7 +103,7 @@ def test_predicate_schema(
     ),
 )
 def test_expression_schema_serialization(predicate: dict[str, Any], dumped: dict[str, Any]) -> None:
-    assert ExpressionSchema(**predicate).model_dump() == dumped
+    assert RuleSchema(**predicate).model_dump() == dumped
 
 
 def test_simple_predicate() -> None:
@@ -154,7 +154,7 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                     },
                 ]
             },
-            ExpressionSchema(
+            RuleSchema(
                 ExpressionsWrapperSchema(
                     expressions=[
                         SimplePredicateSchema({"name__len_le": 10}),
@@ -180,5 +180,5 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
         )
     ],
 )
-def test_expression_schema(expression_dict: dict[str, Any], schema: ExpressionSchema) -> None:
-    assert ExpressionSchema(**expression_dict) == schema
+def test_expression_schema(expression_dict: dict[str, Any], schema: RuleSchema) -> None:
+    assert RuleSchema(**expression_dict) == schema

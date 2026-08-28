@@ -125,5 +125,5 @@ ExpressionType = Annotated[
 ]
 
 
-class ExpressionSchema(RootModel[ExpressionType]):
+class RuleSchema(RootModel[ExpressionType]):
     pass
