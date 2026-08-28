@@ -10,6 +10,59 @@ def get_json_schema(
     *,
     include_first_argument: bool = False,
 ) -> dict[str, Any]:
+    """Get the JSON schema for a rule.
+
+    Args:
+        rule (Callable): The rule to get the JSON schema for.
+        include_first_argument (bool, optional):Whether to include the first argument in the schema.
+            Defaults to False.
+
+    Returns:
+        dict: The JSON schema for the rule.
+
+    Example:
+    ```python
+    from pyspecification import get_json_schema, object_rule
+
+
+    @object_rule
+    def is_admin(user: User) -> bool:
+        return user.is_admin
+
+
+    @object_rule
+    def name__istartswith(user: User, value: str) -> bool:
+        return user.name.lower().startswith(value.lower())
+
+
+    @object_rule
+    def age__between(user: User, min_age: int, max_age: int) -> bool:
+        return user.age >= min_age and user.age <= max_age
+
+
+    def main() -> None:
+        schema = get_json_schema(is_admin)
+        print(schema)
+        # {"return": {"type": "boolean"}}
+
+        schema = get_json_schema(name__istartswith)
+        print(schema)
+        # {"value": {"type": "string"}, "return": {"type": "boolean"}}
+
+        schema = get_json_schema(age__between)
+        print(schema)
+        # {
+        #     "min_age": {"type": "integer"},
+        #     "max_age": {"type": "integer"},
+        #     "return": {"type": "boolean"},
+        # }
+
+
+    if __name__ == "__main__":
+        main()
+    ```
+
+    """
     if include_first_argument:
         return {arg: TypeAdapter(typ).json_schema() for arg, typ in get_annotations(rule).items()}
 

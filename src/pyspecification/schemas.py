@@ -16,6 +16,8 @@ from .validators import validate_python_vars_fn_naming_convention
 
 
 class SimplePredicateSchema(RootModel[dict[str, Any]]):
+    """A schema for a simple predicate."""
+
     @computed_field(exclude_if=lambda _: True)
     @property
     def type(self) -> Literal["simple"]:
@@ -79,6 +81,8 @@ class SimplePredicateSchema(RootModel[dict[str, Any]]):
 
 
 class PredicateSchema(BaseModel):
+    """A schema for a predicate."""
+
     type: Annotated[Literal["predicate"], Field(exclude=True)] = "predicate"
 
     name: Annotated[str, AfterValidator(validate_python_vars_fn_naming_convention)]
@@ -96,6 +100,8 @@ class PredicateSchema(BaseModel):
 
 
 class ExpressionsWrapperSchema(BaseModel):
+    """A schema for an expression."""
+
     type: Annotated[Literal["wrapper"], Field(exclude=True)] = "wrapper"
 
     operator: Literal["and", "or"] = "and"
@@ -126,4 +132,4 @@ ExpressionType = Annotated[
 
 
 class RuleSchema(RootModel[ExpressionType]):
-    pass
+    """A schema for a rule."""

@@ -7,6 +7,8 @@ type ExpressionDict = ExpressionWrapperDict | PredicateDict
 
 
 class PredicateDict(TypedDict):
+    """A dictionary representation of a predicate."""
+
     name: str
     args: list[Any]
     kwargs: dict[str, Any]
@@ -14,12 +16,94 @@ class PredicateDict(TypedDict):
 
 
 class ExpressionWrapperDict(TypedDict):
+    """A dictionary representation of an expression."""
+
     operator: Literal["and", "or"]
     expressions: list["ExpressionWrapperDict | PredicateDict"]
     inverse: bool
 
 
 class PredicateCompiler:
+    """A compiler for predicates.
+
+    Args:
+        rules (dict[str, Callable[..., Predicate[Any, Any]]]): The rules to use for compiling.
+        initial_predicate_factory (Callable[[ExpressionWrapperDict], Predicate[Any, Any]]): The factory to use for creating initial predicates.
+
+    Example:
+    ```python
+    from pyspecification import Predicate, PredicateCompiler, object_rule
+
+
+    @object_rule
+    def is_admin(user: User) -> bool:
+        return user.is_admin
+
+
+    @object_rule
+    def name__istartswith(user: User, value: str) -> bool:
+        return user.name.lower().startswith(value.lower())
+
+
+    @object_rule
+    def age__between(user: User, min_age: int, max_age: int) -> bool:
+        return user.age >= min_age and user.age <= max_age
+
+
+    def main() -> None:
+        rules = {
+            "is_admin": is_admin,
+            "name__istartswith": name__istartswith,
+            "age__between": age__between,
+        }
+
+        compiler = PredicateCompiler(
+            rules,
+            lambda schema: Predicate(lambda _: schema["operator"] == "and"),
+        )
+
+        rule_data = {
+            "operator": "or",
+            "inverse": False,
+            "expressions": [
+                {
+                    "name": "is_admin",
+                    "inverse": False,
+                    "args": [],
+                    "kwargs": {},
+                },
+                {
+                    "operator": "and",
+                    "inverse": False,
+                    "expressions": [
+                        {
+                            "name": "name__istartswith",
+                            "inverse": False,
+                            "args": ["admin"],
+                            "kwargs": {},
+                        },
+                        {
+                            "name": "age__between",
+                            "inverse": False,
+                            "args": [18, 30],
+                            "kwargs": {},
+                        },
+                    ],
+                },
+            ],
+        }
+
+        predicate = compiler.compile(rule_data)
+
+        assert all(predicate(user) for user in users)
+
+
+    if __name__ == "__main__":
+        main()
+    ```
+
+    """  # noqa: E501
+
     def __init__(
         self,
         rules: dict[str, Callable[..., Predicate[Any, Any]]],

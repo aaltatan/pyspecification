@@ -10,6 +10,12 @@ def object_rule[T, R: ReturnType, **P](
 ) -> Callable[P, Predicate[T, R]]:
     """Decorator for creating rules for object-based predicates.
 
+    Args:
+        fn (Callable[Concatenate[T, P], R]): The function to wrap.
+
+    Returns:
+        Callable[P, Predicate[T, R]]: The wrapped function.
+
     Example:
     ```python
     from dataclasses import dataclass
@@ -71,6 +77,12 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     fn: Callable[Concatenate[T, K, P], R],
 ) -> Callable[Concatenate[K, P], Predicate[T, R]]:
     """Decorator for creating rules for subscriptable-based predicates.
+
+    Args:
+        fn (Callable[Concatenate[T, K, P], R]): The function to wrap.
+
+    Returns:
+        Callable[Concatenate[K, P], Predicate[T, R]]: The wrapped function.
 
     Example:
     ```python

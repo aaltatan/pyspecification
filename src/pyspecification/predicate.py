@@ -11,6 +11,49 @@ class ReturnType(Protocol):
 
 
 class Predicate[T, R: ReturnType]:
+    """A predicate is a function that takes an object of type T and returns a value of type R.
+
+    Args:
+        fn (Callable[[T], R]): The function to wrap.
+        description (str, optional): A description of the predicate. Defaults to None.
+
+    Example:
+    ```python
+    from pyspecification import Predicate
+
+
+    def is_admin(user: User) -> bool:
+        return user.is_admin
+
+
+    def name__istartswith(user: User, value: str) -> bool:
+        return user.name.lower().startswith(value.lower())
+
+
+    def age__between(user: User, min_age: int, max_age: int) -> bool:
+        return user.age >= min_age and user.age <= max_age
+
+
+    is_admin: Predicate[User, bool] = Predicate(is_admin)
+    name__istartswith: Predicate[User, bool] = Predicate(name__istartswith)
+    age__between: Predicate[User, bool] = Predicate(age__between)
+
+
+    rule = is_admin | (name__istartswith("admin") & age__between(18, 30))
+
+
+    def main() -> None:
+        assert rule(User(name="Abdullah", age=18, is_admin=True))
+        assert rule(User(name="Abdullah", age=16, is_admin=True))
+        assert rule(User(name="admin", age=20, is_admin=False))
+
+
+    if __name__ == "__main__":
+        main()
+    ```
+
+    """
+
     def __init__(self, fn: Callable[[T], R], description: str | None = None) -> None:
         self._fn = fn
         self._description = description
