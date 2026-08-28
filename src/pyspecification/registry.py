@@ -1,8 +1,9 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from functools import wraps
 from typing import Any, Concatenate
 
 from .constants import RESERVED_WORDS
+from .exceptions import RuleNotFoundError
 from .predicate import Predicate, ReturnType
 from .processors import DEFAULT_PROCESSORS, ProcessFn, process_arguments
 from .rules import object_rule, subscriptable_rule
@@ -16,12 +17,8 @@ from .validators import validate_python_vars_fn_naming_convention
 type ObjectRuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, P], R]
 type ObjectRuleFn[T, R: ReturnType, **P] = Callable[P, Predicate[T, R]]
 
-type SubscriptableRuleDefinitionFn[T: (dict, Sequence), K, R: ReturnType, **P] = Callable[
-    Concatenate[T, K, P], R
-]
-type SubscriptableRuleFn[T: (dict, Sequence), K, R: ReturnType, **P] = Callable[
-    Concatenate[K, P], Predicate[T, R]
-]
+type SubscriptableRuleDefinitionFn[T, K, R: ReturnType, **P] = Callable[Concatenate[T, K, P], R]
+type SubscriptableRuleFn[T, K, R: ReturnType, **P] = Callable[Concatenate[K, P], Predicate[T, R]]
 
 
 # -----------------------
@@ -32,11 +29,6 @@ type SubscriptableRuleFn[T: (dict, Sequence), K, R: ReturnType, **P] = Callable[
 class RuleAlreadyRegisteredError(Exception):
     def __init__(self, name: str) -> None:
         super().__init__(f"Rule '{name}' is already registered")
-
-
-class RuleNotRegisteredError(Exception):
-    def __init__(self, name: str) -> None:
-        super().__init__(f"Rule '{name}' is not registered")
 
 
 # -----------------------
@@ -115,7 +107,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
 
     def __getitem__(self, name: str) -> ObjectRuleFn[T, R, ...]:
         if name not in self._rules:
-            raise RuleNotRegisteredError(name)
+            raise RuleNotFoundError(name, "registered")
         return self._rules[name]
 
     def rule[**P](
@@ -165,7 +157,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
 # -----------------------
 
 
-class SubscriptableRulesRegistry[T: (dict, Sequence), K, R: ReturnType]:
+class SubscriptableRulesRegistry[T, K, R: ReturnType]:
     """A registry for subscriptable-based rules.
 
     Example:
@@ -275,7 +267,7 @@ class SubscriptableRulesRegistry[T: (dict, Sequence), K, R: ReturnType]:
 
     def __getitem__(self, name: str) -> SubscriptableRuleFn[T, K, R, ...]:
         if name not in self._rules:
-            raise RuleNotRegisteredError(name)
+            raise RuleNotFoundError(name, "registered")
         return self._rules[name]
 
     def rule[**P](

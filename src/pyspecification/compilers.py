@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from typing import Any, Literal, TypedDict
 
+from .exceptions import RuleNotFoundError
 from .predicate import Predicate
 
 type ExpressionDict = ExpressionWrapperDict | PredicateDict
@@ -119,6 +120,9 @@ class PredicateCompiler:
         return self._compile_single(expression)
 
     def _compile_single(self, single: PredicateDict) -> Predicate[Any, Any]:
+        if single["name"] not in self._rules:
+            raise RuleNotFoundError(single["name"], "found")
+
         predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
 
         if single["inverse"]:
