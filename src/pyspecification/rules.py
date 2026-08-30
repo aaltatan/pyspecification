@@ -139,6 +139,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
             @wraps(fn)
             def inner(obj: T) -> R:
+                fn_name = fn.__name__
 
                 if (
                     check_key_existence
@@ -146,11 +147,11 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
                     and isinstance(key, int)
                     and len(obj) <= key
                 ):
-                    msg = f"Key {key} does not exist in the list {obj} of rule {fn.__name__}"
-                    raise KeyError(msg)
+                    msg = f"Key {key} does not exist in the list of rule '{fn_name}'"
+                    raise IndexError(msg)
 
                 if check_key_existence and isinstance(obj, dict) and key not in obj:
-                    msg = f"Key {key} does not exist in the dictionary {obj} of rule {fn.__name__}"
+                    msg = f"Key '{key}' does not exist in the dictionary of rule '{fn_name}'"
                     raise KeyError(msg)
 
                 return fn(obj, key, *args, **kwargs)
