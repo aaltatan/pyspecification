@@ -10,7 +10,7 @@ class User:
     is_admin: bool = True
 
 
-@object_rule
+@object_rule()
 def name__istartswith(user: User, value: str) -> bool: ...
 
 

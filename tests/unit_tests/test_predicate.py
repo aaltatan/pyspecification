@@ -23,9 +23,13 @@ def _age__between_18_and_30(user: User) -> bool:
     return user.age >= 18 and user.age <= 30
 
 
-is_admin: Predicate[User, bool] = Predicate(_is_admin)
-name__istartswith_admin: Predicate[User, bool] = Predicate(_name__istartswith_admin)
-age__between_18_and_30: Predicate[User, bool] = Predicate(_age__between_18_and_30)
+is_admin: Predicate[User, bool] = Predicate(_is_admin, operator="logical")
+name__istartswith_admin: Predicate[User, bool] = Predicate(
+    _name__istartswith_admin, operator="logical"
+)
+age__between_18_and_30: Predicate[User, bool] = Predicate(
+    _age__between_18_and_30, operator="logical"
+)
 
 
 rule = is_admin | (name__istartswith_admin & age__between_18_and_30 & ~is_admin)
@@ -34,7 +38,7 @@ rule = is_admin | (name__istartswith_admin & age__between_18_and_30 & ~is_admin)
 def test_predicate_repr() -> None:
     assert (
         repr(rule)
-        == "Predicate((_is_admin | ((_name__istartswith_admin & _age__between_18_and_30) & ~_is_admin)))"  # noqa: E501
+        == "Predicate((_is_admin OR ((_name__istartswith_admin AND _age__between_18_and_30) AND NOT _is_admin)))"  # noqa: E501
     )
 
 

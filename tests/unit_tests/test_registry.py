@@ -22,12 +22,12 @@ class User:
 
 @pytest.fixture
 def obj_registry() -> ObjectRulesRegistry[User, bool]:
-    return ObjectRulesRegistry[User, bool]()
+    return ObjectRulesRegistry[User, bool](operator="logical")
 
 
 @pytest.fixture
 def sub_registry() -> SubscriptableRulesRegistry[dict[str, Any], str, bool]:
-    return SubscriptableRulesRegistry[dict[str, Any], str, bool]()
+    return SubscriptableRulesRegistry[dict[str, Any], str, bool](operator="logical")
 
 
 # -----------------------

@@ -16,17 +16,17 @@ class User:
     is_admin: bool = True
 
 
-@object_rule
+@object_rule()
 def is_admin(user: User) -> bool:
     return user.is_admin
 
 
-@object_rule
+@object_rule()
 def name__istartswith(user: User, value: str) -> bool:
     return user.name.lower().startswith(value.lower())
 
 
-@object_rule
+@object_rule()
 def age__between(user: User, min_age: int, max_age: int) -> bool:
     return user.age >= min_age and user.age <= max_age
 
@@ -52,17 +52,17 @@ def test_is_admin_rule(user: User, expected: bool) -> None:  # noqa: FBT001
 # -----------------------
 
 
-@subscriptable_rule
+@subscriptable_rule()
 def is_true(obj: dict[str, Any], key: str) -> bool:
     return obj[key] is True
 
 
-@subscriptable_rule
+@subscriptable_rule()
 def istartswith(obj: dict[str, Any], key: str, value: str) -> bool:
     return obj[key].lower().startswith(value.lower())
 
 
-@subscriptable_rule
+@subscriptable_rule()
 def between(obj: dict[str, Any], key: str, min_value: int, max_value: int) -> bool:
     return obj[key] >= min_value and obj[key] <= max_value
 
@@ -88,17 +88,17 @@ def test_is_admin_dict_rule(user: dict[str, Any], expected: bool) -> None:  # no
 # -----------------------
 
 
-@subscriptable_rule
+@subscriptable_rule()
 def seq_is_true(obj: list[Any], idx: int) -> bool:
     return obj[idx] is True
 
 
-@subscriptable_rule
+@subscriptable_rule()
 def seq_istartswith(obj: list[Any], idx: int, value: str) -> bool:
     return obj[idx].lower().startswith(value.lower())
 
 
-@subscriptable_rule
+@subscriptable_rule()
 def seq_between(obj: list[Any], idx: int, min_value: int, max_value: int) -> bool:
     return obj[idx] >= min_value and obj[idx] <= max_value
 
