@@ -4,7 +4,7 @@ from typing import Any, Concatenate
 
 from .constants import RESERVED_WORDS
 from .exceptions import RuleNotFoundError
-from .predicate import Predicate, ReturnType
+from .predicate import OperatorType, Predicate, ReturnType
 from .processors import DEFAULT_PROCESSORS, ProcessFn, process_arguments
 from .rules import object_rule, subscriptable_rule
 from .validators import validate_python_vars_fn_naming_convention
@@ -38,6 +38,9 @@ class RuleAlreadyRegisteredError(Exception):
 
 class ObjectRulesRegistry[T, R: ReturnType]:
     """A registry for object-based rules.
+
+    Args:
+        operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
 
     Example:
     ```python
@@ -98,8 +101,9 @@ class ObjectRulesRegistry[T, R: ReturnType]:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, operator: OperatorType) -> None:
         self._rules: dict[str, ObjectRuleFn[T, R, ...]] = {}
+        self._operator = operator
 
     @property
     def rules(self) -> dict[str, ObjectRuleFn[T, R, ...]]:
@@ -145,7 +149,9 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
             processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
-            return object_rule(fn)(*processed_args, **processed_kwargs)
+            return object_rule(operator=self._operator)(fn)(  # type: ignore  # noqa: PGH003
+                *processed_args, **processed_kwargs
+            )
 
         self._rules[rule_name] = wrapper
 
@@ -159,6 +165,9 @@ class ObjectRulesRegistry[T, R: ReturnType]:
 
 class SubscriptableRulesRegistry[T, K, R: ReturnType]:
     """A registry for subscriptable-based rules.
+
+    Args:
+        operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
 
     Example:
     ```python
@@ -258,8 +267,9 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, operator: OperatorType) -> None:
         self._rules: dict[str, SubscriptableRuleFn[T, K, R, ...]] = {}
+        self._operator = operator
 
     @property
     def rules(self) -> dict[str, SubscriptableRuleFn[T, K, R, ...]]:
@@ -307,7 +317,9 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         @wraps(fn)
         def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
             processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
-            return subscriptable_rule(fn)(key, *processed_args, **processed_kwargs)
+            return subscriptable_rule(operator=self._operator)(fn)(  # type: ignore  # noqa: PGH003
+                key, *processed_args, **processed_kwargs
+            )
 
         self._rules[rule_name] = wrapper
 

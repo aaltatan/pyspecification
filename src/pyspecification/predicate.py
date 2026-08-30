@@ -1,7 +1,9 @@
-# ruff: noqa: PGH003
+# ruff: noqa: PGH003, SLF001
 
 from collections.abc import Callable
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
+
+type OperatorType = Literal["bitwise", "logical"]
 
 
 class ReturnType(Protocol):
@@ -15,6 +17,7 @@ class Predicate[T, R: ReturnType]:
 
     Args:
         fn (Callable[[T], R]): The function to wrap.
+        operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
         description (str, optional): A description of the predicate. Defaults to None.
 
     Example:
@@ -34,9 +37,18 @@ class Predicate[T, R: ReturnType]:
         return user.age >= min_age and user.age <= max_age
 
 
-    is_admin: Predicate[User, bool] = Predicate(is_admin)
-    name__istartswith: Predicate[User, bool] = Predicate(name__istartswith)
-    age__between: Predicate[User, bool] = Predicate(age__between)
+    is_admin: Predicate[User, bool] = Predicate(
+        is_admin,
+        operator="logical",
+    )
+    name__istartswith: Predicate[User, bool] = Predicate(
+        name__istartswith,
+        operator="logical",
+    )
+    age__between: Predicate[User, bool] = Predicate(
+        age__between,
+        operator="logical",
+    )
 
 
     rule = is_admin | (name__istartswith("admin") & age__between(18, 30))
@@ -54,24 +66,77 @@ class Predicate[T, R: ReturnType]:
 
     """
 
-    def __init__(self, fn: Callable[[T], R], description: str | None = None) -> None:
+    def __init__(
+        self,
+        fn: Callable[[T], R],
+        /,
+        *,
+        operator: OperatorType,
+        description: str | None = None,
+    ) -> None:
         self._fn = fn
         self._description = description
+        self._operator = operator
 
     def __call__(self, obj: T) -> R:
         return self._fn(obj)
 
     def __and__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
-        return Predicate(lambda obj: self(obj) and other(obj), f"({self} & {other})")
+        self._insure_matching_operators(other)
+
+        if self._operator == "bitwise":
+            return Predicate(
+                lambda obj: self(obj) & other(obj),
+                description=f"({self} & {other})",
+                operator="bitwise",
+            )
+
+        return Predicate(
+            lambda obj: self(obj) and other(obj),
+            description=f"({self} AND {other})",
+            operator="logical",
+        )
 
     def __or__(self, other: "Predicate[T, R]") -> "Predicate[T, R]":
-        return Predicate(lambda obj: self(obj) or other(obj), f"({self} | {other})")
+        self._insure_matching_operators(other)
+
+        if self._operator == "bitwise":
+            return Predicate(
+                lambda obj: self(obj) | other(obj),
+                description=f"({self} | {other})",
+                operator="bitwise",
+            )
+
+        return Predicate(
+            lambda obj: self(obj) or other(obj),
+            description=f"({self} OR {other})",
+            operator="logical",
+        )
 
     def __invert__(self) -> "Predicate[T, R]":
-        return Predicate(lambda obj: not self(obj), f"~{self}")  # type: ignore
+        if self._operator == "bitwise":
+            return Predicate(
+                lambda obj: ~self(obj),
+                description=f"~{self}",
+                operator="bitwise",
+            )
+
+        return Predicate(
+            lambda obj: not self(obj),  # type: ignore
+            description=f"NOT {self}",
+            operator="logical",
+        )
 
     def __str__(self) -> str:
         return self._description or self._fn.__name__ or "Predicate"
 
     def __repr__(self) -> str:
         return f"Predicate({self})"
+
+    def _insure_matching_operators(self, other: "Predicate[T, R]") -> None:
+        if self._operator != other._operator:
+            msg = (
+                "Cannot combine predicates with different operators:"
+                f" {self._operator} != {other._operator}"
+            )
+            raise ValueError(msg)
