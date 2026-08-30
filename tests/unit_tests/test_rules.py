@@ -88,7 +88,7 @@ def test_raising_error_when_using_key_does_not_exists_in_dict() -> None:
 
     with pytest.raises(
         KeyError,
-        match="Key 'does_not_exists' does not exist in the dictionary of rule 'istartswith'",
+        match="Key 'does_not_exists' does not exist in the object of rule 'istartswith'",
     ):
         rule({"name": "Abdullah", "age": 18, "is_admin": True})
 
@@ -133,7 +133,7 @@ def test_raising_error_when_using_idx_does_not_exists_in_list() -> None:
     rule = seq_istartswith(3, "admin")
 
     with pytest.raises(
-        IndexError,
-        match="Key 3 does not exist in the list of rule 'seq_istartswith'",
+        KeyError,
+        match="Key '3' does not exist in the object of rule 'seq_istartswith'",
     ):
         rule(["Abdullah", 18, True])
