@@ -121,7 +121,7 @@ class PredicateCompiler[T, R: ReturnType]:
 
     def _compile_single(self, single: PredicateDict) -> Predicate[T, R]:
         if single["name"] not in self._rules:
-            raise RuleNotFoundError(single["name"], "found")
+            raise RuleNotFoundError(single["name"])
 
         predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
 
