@@ -2,6 +2,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
+from .exceptions import RuleKeyDoesNotExistError
 from .predicate import OperatorType, Predicate, ReturnType
 
 
@@ -86,12 +87,14 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     *,
     operator: OperatorType = "logical",
     check_key_existence: bool = False,
+    forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
 ) -> Callable[[Callable[Concatenate[T, K, P], R]], Callable[Concatenate[K, P], Predicate[T, R]]]:
     """A Decorator for creating subscriptable-based rules.
 
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
         check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to False.
+        forbidden_keys (set[str], optional): A set of keys that are not allowed in the dictionary. Defaults to None.
 
     Example:
     ```python
@@ -139,20 +142,20 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
             @wraps(fn)
             def inner(obj: T) -> R:
-                fn_name = fn.__name__
 
-                if (
-                    check_key_existence
-                    and isinstance(obj, list)
-                    and isinstance(key, int)
-                    and len(obj) <= key
-                ):
-                    msg = f"Key {key} does not exist in the list of rule '{fn_name}'"
-                    raise IndexError(msg)
+                rules = [
+                    lambda: forbidden_keys is not None and key in forbidden_keys,
+                    lambda: (
+                        check_key_existence
+                        and isinstance(obj, list)
+                        and isinstance(key, int)
+                        and len(obj) <= key
+                    ),
+                    lambda: check_key_existence and isinstance(obj, dict) and key not in obj,
+                ]
 
-                if check_key_existence and isinstance(obj, dict) and key not in obj:
-                    msg = f"Key '{key}' does not exist in the dictionary of rule '{fn_name}'"
-                    raise KeyError(msg)
+                if any(rule() for rule in rules):
+                    raise RuleKeyDoesNotExistError(str(key), fn.__name__)
 
                 return fn(obj, key, *args, **kwargs)
 
