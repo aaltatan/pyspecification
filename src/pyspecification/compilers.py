@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Any, Literal, TypedDict
 
 from .exceptions import RuleNotFoundError
-from .predicate import Predicate
+from .predicate import Predicate, ReturnType
 
 type ExpressionDict = ExpressionWrapperDict | PredicateDict
 
@@ -24,7 +24,7 @@ class ExpressionWrapperDict(TypedDict):
     inverse: bool
 
 
-class PredicateCompiler:
+class PredicateCompiler[T, R: ReturnType]:
     """A compiler for predicates.
 
     Args:
@@ -107,19 +107,19 @@ class PredicateCompiler:
 
     def __init__(
         self,
-        rules: dict[str, Callable[..., Predicate[Any, Any]]],
-        initial_predicate_factory: Callable[[ExpressionWrapperDict], Predicate[Any, Any]],
+        rules: dict[str, Callable[..., Predicate[T, R]]],
+        initial_predicate_factory: Callable[[ExpressionWrapperDict], Predicate[T, R]],
     ) -> None:
         self._rules = rules
         self._initial_predicate_factory = initial_predicate_factory
 
-    def compile(self, expression: ExpressionDict) -> Predicate[Any, Any]:
+    def compile(self, expression: ExpressionDict) -> Predicate[T, R]:
         if "expressions" in expression:
             return self._compile_wrapper(expression)
 
         return self._compile_single(expression)
 
-    def _compile_single(self, single: PredicateDict) -> Predicate[Any, Any]:
+    def _compile_single(self, single: PredicateDict) -> Predicate[T, R]:
         if single["name"] not in self._rules:
             raise RuleNotFoundError(single["name"], "found")
 
@@ -130,7 +130,7 @@ class PredicateCompiler:
 
         return predicate
 
-    def _compile_wrapper(self, wrapper: ExpressionWrapperDict) -> Predicate[Any, Any]:
+    def _compile_wrapper(self, wrapper: ExpressionWrapperDict) -> Predicate[T, R]:
         predicate = self._initial_predicate_factory(wrapper)
 
         for expression in wrapper["expressions"]:
