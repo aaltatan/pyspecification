@@ -1,3 +1,4 @@
+# ruff: noqa: PLR0913
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, Concatenate
@@ -83,14 +84,20 @@ class ObjectRulesRegistry[T, R: ReturnType]:
 
     def __init__(self, operator: OperatorType) -> None:
         self._rules: dict[str, ObjectRuleFn[T, R, ...]] = {}
+        self._hidden: set[str] = set()
+
         self._operator = operator
 
     @property
     def rules(self) -> dict[str, ObjectRuleFn[T, R, ...]]:
-        return self._rules
+        return {
+            rule_name: rule
+            for rule_name, rule in self._rules.items()
+            if rule_name not in self._hidden
+        }
 
     def __getitem__(self, name: str) -> ObjectRuleFn[T, R, ...]:
-        if name not in self._rules:
+        if name not in self._rules or name in self._hidden:
             raise RuleNotRegisteredError(name)
         return self._rules[name]
 
@@ -99,20 +106,23 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         *,
         name: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        hidden: bool = False,
     ) -> Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]:
         def decorator(fn: ObjectRuleDefinitionFn[T, R, P]) -> ObjectRuleFn[T, R, P]:
-            return self._register_rule(fn, name=name, processors=processors)
+            return self._register_rule(fn, name=name, processors=processors, hidden=hidden)
 
         return decorator
 
     def register_rule[**P](
         self,
         fn: ObjectRuleDefinitionFn[T, R, P],
+        /,
         *,
         name: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        hidden: bool = False,
     ) -> ObjectRuleFn[T, R, P]:
-        return self._register_rule(fn, name=name, processors=processors)
+        return self._register_rule(fn, name=name, processors=processors, hidden=hidden)
 
     def _register_rule[**P](
         self,
@@ -120,8 +130,12 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         *,
         name: str | None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]],
+        hidden: bool,
     ) -> ObjectRuleFn[T, R, P]:
         rule_name = _process_rule_name(fn, name)
+
+        if hidden:
+            self._hidden.add(rule_name)
 
         if rule_name in self._rules:
             raise RuleAlreadyRegisteredError(rule_name)
@@ -250,16 +264,22 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
     ) -> None:
         self._rules: dict[str, SubscriptableRuleFn[T, K, R, ...]] = {}
+        self._hidden: set[str] = set()
+
         self._operator = operator
         self._check_key_existence = check_key_existence
         self._forbidden_keys = forbidden_keys
 
     @property
     def rules(self) -> dict[str, SubscriptableRuleFn[T, K, R, ...]]:
-        return self._rules
+        return {
+            rule_name: rule
+            for rule_name, rule in self._rules.items()
+            if rule_name not in self._hidden
+        }
 
     def __getitem__(self, name: str) -> SubscriptableRuleFn[T, K, R, ...]:
-        if name not in self._rules:
+        if name not in self._rules or name in self._hidden:
             raise RuleNotRegisteredError(name)
         return self._rules[name]
 
@@ -268,6 +288,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        hidden: bool = False,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
     ) -> Callable[[SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]]:
@@ -280,6 +301,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
                 processors=processors,
                 check_key_existence=check_key_existence,
                 forbidden_keys=forbidden_keys,
+                hidden=hidden,
             )
 
         return decorator
@@ -287,9 +309,11 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
     def register_rule[**P](
         self,
         fn: SubscriptableRuleDefinitionFn[T, K, R, P],
+        /,
         *,
         name: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        hidden: bool = False,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
     ) -> SubscriptableRuleFn[T, K, R, P]:
@@ -299,6 +323,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             processors=processors,
             check_key_existence=check_key_existence,
             forbidden_keys=forbidden_keys,
+            hidden=hidden,
         )
 
     def _register_rule[**P](
@@ -307,10 +332,14 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]],
+        hidden: bool,
         check_key_existence: bool | None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...],
     ) -> SubscriptableRuleFn[T, K, R, P]:
         rule_name = _process_rule_name(fn, name)
+
+        if hidden:
+            self._hidden.add(rule_name)
 
         if rule_name in self._rules:
             raise RuleAlreadyRegisteredError(rule_name)
