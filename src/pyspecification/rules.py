@@ -143,7 +143,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
             @wraps(fn)
             def inner(obj: T) -> R:
 
-                rules = [
+                checkers = [
                     lambda: forbidden_keys is not None and key in forbidden_keys,
                     lambda: (
                         check_key_existence
@@ -154,7 +154,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
                     lambda: check_key_existence and isinstance(obj, dict) and key not in obj,
                 ]
 
-                if any(rule() for rule in rules):
+                if any(checker() for checker in checkers):
                     raise RuleKeyDoesNotExistError(str(key), fn.__name__)
 
                 return fn(obj, key, *args, **kwargs)
