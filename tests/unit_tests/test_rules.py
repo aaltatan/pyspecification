@@ -57,7 +57,7 @@ def is_true(obj: dict[str, Any], key: str) -> bool:
     return obj[key] is True
 
 
-@subscriptable_rule()
+@subscriptable_rule(check_key_existence=True)
 def istartswith(obj: dict[str, Any], key: str, value: str) -> bool:
     return obj[key].lower().startswith(value.lower())
 
@@ -83,6 +83,16 @@ def test_is_admin_dict_rule(user: dict[str, Any], expected: bool) -> None:  # no
     assert admin_rule_v2(user) == expected
 
 
+def test_raising_error_when_using_key_does_not_exists_in_dict() -> None:
+    rule = istartswith("does_not_exists", "some value")
+
+    with pytest.raises(
+        KeyError,
+        match="Key 'does_not_exists' does not exist in the dictionary of rule 'istartswith'",
+    ):
+        rule({"name": "Abdullah", "age": 18, "is_admin": True})
+
+
 # -----------------------
 # list rule
 # -----------------------
@@ -93,7 +103,7 @@ def seq_is_true(obj: list[Any], idx: int) -> bool:
     return obj[idx] is True
 
 
-@subscriptable_rule()
+@subscriptable_rule(check_key_existence=True)
 def seq_istartswith(obj: list[Any], idx: int, value: str) -> bool:
     return obj[idx].lower().startswith(value.lower())
 
@@ -117,3 +127,13 @@ admin_rule_v3 = seq_is_true(-1) | (seq_istartswith(0, "admin") & seq_between(1, 
 )
 def test_is_admin_seq_rule(user: list[Any], expected: bool) -> None:  # noqa: FBT001
     assert admin_rule_v3(user) == expected
+
+
+def test_raising_error_when_using_idx_does_not_exists_in_list() -> None:
+    rule = seq_istartswith(3, "admin")
+
+    with pytest.raises(
+        IndexError,
+        match="Key 3 does not exist in the list of rule 'seq_istartswith'",
+    ):
+        rule(["Abdullah", 18, True])

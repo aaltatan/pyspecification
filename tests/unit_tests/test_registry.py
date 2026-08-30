@@ -27,7 +27,10 @@ def obj_registry() -> ObjectRulesRegistry[User, bool]:
 
 @pytest.fixture
 def sub_registry() -> SubscriptableRulesRegistry[dict[str, Any], str, bool]:
-    return SubscriptableRulesRegistry[dict[str, Any], str, bool](operator="logical")
+    return SubscriptableRulesRegistry[dict[str, Any], str, bool](
+        operator="logical",
+        check_key_existence=False,
+    )
 
 
 # -----------------------

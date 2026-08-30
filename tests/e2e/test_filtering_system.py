@@ -53,7 +53,10 @@ DATA = [
 ]
 
 
-rules = SubscriptableRulesRegistry[dict[str, Any], str, bool]("logical")
+rules = SubscriptableRulesRegistry[dict[str, Any], str, bool](
+    operator="logical",
+    check_key_existence=False,
+)
 
 
 @rules.rule()
