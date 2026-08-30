@@ -267,9 +267,15 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
 
     """
 
-    def __init__(self, operator: OperatorType) -> None:
+    def __init__(
+        self,
+        *,
+        operator: OperatorType,
+        check_key_existence: bool,
+    ) -> None:
         self._rules: dict[str, SubscriptableRuleFn[T, K, R, ...]] = {}
         self._operator = operator
+        self._check_key_existence = check_key_existence
 
     @property
     def rules(self) -> dict[str, SubscriptableRuleFn[T, K, R, ...]]:
@@ -285,11 +291,17 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        check_key_existence: bool | None = None,
     ) -> Callable[[SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]]:
         def decorator(
             fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         ) -> SubscriptableRuleFn[T, K, R, P]:
-            return self._register_rule(fn, name=name, processors=processors)
+            return self._register_rule(
+                fn,
+                name=name,
+                processors=processors,
+                check_key_existence=check_key_existence,
+            )
 
         return decorator
 
@@ -299,8 +311,14 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        check_key_existence: bool | None = None,
     ) -> SubscriptableRuleFn[T, K, R, P]:
-        return self._register_rule(fn, name=name, processors=processors)
+        return self._register_rule(
+            fn,
+            name=name,
+            processors=processors,
+            check_key_existence=check_key_existence,
+        )
 
     def _register_rule[**P](
         self,
@@ -308,6 +326,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]],
+        check_key_existence: bool | None,
     ) -> SubscriptableRuleFn[T, K, R, P]:
         rule_name = _process_rule_name(fn, name)
 
@@ -317,9 +336,14 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         @wraps(fn)
         def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
             processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
-            return subscriptable_rule(operator=self._operator)(fn)(  # type: ignore  # noqa: PGH003
-                key, *processed_args, **processed_kwargs
-            )
+            return subscriptable_rule(
+                operator=self._operator,  # type: ignore  # noqa: PGH003
+                check_key_existence=(
+                    check_key_existence
+                    if check_key_existence is not None
+                    else self._check_key_existence
+                ),
+            )(fn)(key, *processed_args, **processed_kwargs)
 
         self._rules[rule_name] = wrapper
 
