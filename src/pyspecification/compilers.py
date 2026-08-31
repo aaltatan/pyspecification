@@ -1,10 +1,14 @@
 from collections.abc import Callable
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, TypeGuard
 
-from .exceptions import RuleNotFoundError
+from .exceptions import CompilationError
 from .predicate import Predicate, ReturnType
 
 type ExpressionDict = ExpressionWrapperDict | PredicateDict
+
+
+PREDICATE_DICT_KEYS = {"name", "args", "kwargs", "inverse"}
+EXPRESSION_WRAPPER_DICT_KEYS = {"operator", "expressions", "inverse"}
 
 
 class PredicateDict(TypedDict):
@@ -22,6 +26,18 @@ class ExpressionWrapperDict(TypedDict):
     operator: Literal["and", "or"]
     expressions: list["ExpressionWrapperDict | PredicateDict"]
     inverse: bool
+
+
+def is_predicate_dict(d: ExpressionDict | dict[str, Any]) -> TypeGuard[PredicateDict]:
+    return all(key in d for key in PREDICATE_DICT_KEYS) and len(d) == len(PREDICATE_DICT_KEYS)
+
+
+def is_expression_wrapper_dict(
+    d: ExpressionDict | dict[str, Any],
+) -> TypeGuard[ExpressionWrapperDict]:
+    return all(key in d for key in EXPRESSION_WRAPPER_DICT_KEYS) and len(d) == len(
+        EXPRESSION_WRAPPER_DICT_KEYS
+    )
 
 
 class PredicateCompiler[T, R: ReturnType]:
@@ -114,14 +130,27 @@ class PredicateCompiler[T, R: ReturnType]:
         self._initial_predicate_factory = initial_predicate_factory
 
     def compile(self, expression: ExpressionDict) -> Predicate[T, R]:
-        if "expressions" in expression:
+        if is_expression_wrapper_dict(expression):
             return self._compile_wrapper(expression)
 
-        return self._compile_single(expression)
+        if is_predicate_dict(expression):
+            return self._compile_single(expression)
+
+        msg = (
+            f"Invalid expression type: {expression}\n"
+            f"Expected one of\n"
+            "{'expressions': list[ExpressionDict], 'inverse': bool, 'operator': Literal['and', 'or']}\n"  # noqa: E501
+            "or \n{'name': str, 'inverse': bool, 'args': list, 'kwargs': dict}"
+        )
+        raise CompilationError(msg)
 
     def _compile_single(self, single: PredicateDict) -> Predicate[T, R]:
         if single["name"] not in self._rules:
-            raise RuleNotFoundError(single["name"])
+            msg = (
+                f"Rule '{single['name']}' is not found\n"
+                f"Available rules: {', '.join(self._rules.keys())}"
+            )
+            raise CompilationError(msg)
 
         predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
 

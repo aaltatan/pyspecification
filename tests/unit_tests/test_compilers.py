@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from pyspecification import Predicate, PredicateCompiler, RuleNotFoundError, RuleSchema, object_rule
+from pyspecification import CompilationError, Predicate, PredicateCompiler, RuleSchema, object_rule
 
 from tests.models import CompilerGetter
 
@@ -30,7 +30,7 @@ def age__between(user: User, min_age: int, max_age: int) -> bool:
 
 
 @pytest.fixture
-def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler:
+def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User, bool]:
     return logical_compiler_getter(
         {
             "is_admin": is_admin,
@@ -102,7 +102,7 @@ def test_compiler(
     users: list[User],
     rule_dict: dict[str, Any],
     predicate: Predicate[Any, Any],
-    compiler: PredicateCompiler,
+    compiler: PredicateCompiler[User, bool],
 ) -> None:
     compiled_predicate = compiler.compile(RuleSchema(**rule_dict).model_dump())
     assert all(compiled_predicate(user) for user in users) == all(predicate(user) for user in users)
@@ -131,8 +131,18 @@ def test_compiler(
     ],
 )
 def test_compiler_with_invalid_rule_name(
-    compiler: PredicateCompiler,
+    compiler: PredicateCompiler[User, bool],
     rule_dict: dict[str, Any],
 ) -> None:
-    with pytest.raises(RuleNotFoundError, match="Rule 'rule_not_exists' is not found"):
+    with pytest.raises(CompilationError, match="Rule 'rule_not_exists' is not found"):
         compiler.compile(RuleSchema(**rule_dict).model_dump())
+
+
+def test_compiler_with_invalid_rule_dict(compiler: PredicateCompiler) -> None:
+    with pytest.raises(CompilationError, match="Invalid expression type"):
+        compiler.compile(
+            {
+                "name__istartswith": "dasdads",
+                "rule_not_exists": [],  # type: ignore  # noqa: PGH003
+            },
+        )
