@@ -8,6 +8,7 @@ from pyspecification import (
     RuleNotRegisteredError,
     SubscriptableRulesRegistry,
 )
+from pyspecification.exceptions import RuleKeyDoesNotExistError
 
 # -----------------------
 # fixtures
@@ -119,6 +120,18 @@ def test_obj_registry_processors(obj_registry: ObjectRulesRegistry[User, bool]) 
     assert predicate(User(name="Test", age=20)) is True
 
 
+def test_raising_error_when_using_hidden_rule(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(hidden=True)
+    def some_rule(user: User) -> bool: ...
+
+    assert "some_rule" not in obj_registry.rules
+
+    with pytest.raises(RuleNotRegisteredError, match="Rule 'some_rule' is not registered"):
+        obj_registry["some_rule"]
+
+
 # -----------------------
 # dict tests
 # -----------------------
@@ -220,3 +233,31 @@ def test_sub_registry_processors(
 
     predicate = rule_fn("age", age="20")
     assert predicate({"age": 20}) is True
+
+
+def test_raising_error_when_using_one_key_of_forbidden_keys(
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
+) -> None:
+
+    @sub_registry.rule(forbidden_keys=("some_value",))
+    def some_rule(obj: dict[str, Any], key: str, value: str) -> bool: ...
+
+    rule = some_rule("some_value", "some value")
+
+    with pytest.raises(
+        RuleKeyDoesNotExistError,
+        match="Key 'some_value' does not exist in the object of rule 'some_rule'",
+    ):
+        rule({"name": "Abdullah", "age": 18, "is_admin": True})
+
+
+def test_raising_error_when_using_hidden_rule_2(
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
+) -> None:
+    @sub_registry.rule(hidden=True)
+    def some_rule(obj: dict[str, Any], key: str, value: str) -> bool: ...
+
+    assert "some_rule" not in sub_registry.rules
+
+    with pytest.raises(RuleNotRegisteredError, match="Rule 'some_rule' is not registered"):
+        sub_registry["some_rule"]

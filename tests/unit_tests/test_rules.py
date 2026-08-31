@@ -93,6 +93,20 @@ def test_raising_error_when_using_key_does_not_exists_in_dict() -> None:
         rule({"name": "Abdullah", "age": 18, "is_admin": True})
 
 
+def test_raising_error_when_using_one_key_of_forbidden_keys() -> None:
+
+    @subscriptable_rule(forbidden_keys=("some_value",))
+    def some_rule(obj: dict[str, Any], key: str, value: str) -> bool: ...
+
+    rule = some_rule("some_value", "some value")
+
+    with pytest.raises(
+        RuleKeyDoesNotExistError,
+        match="Key 'some_value' does not exist in the object of rule 'some_rule'",
+    ):
+        rule({"name": "Abdullah", "age": 18, "is_admin": True})
+
+
 # -----------------------
 # list rule
 # -----------------------
@@ -135,5 +149,19 @@ def test_raising_error_when_using_idx_does_not_exists_in_list() -> None:
     with pytest.raises(
         RuleKeyDoesNotExistError,
         match="Key '3' does not exist in the object of rule 'seq_istartswith'",
+    ):
+        rule(["Abdullah", 18, True])
+
+
+def test_raising_error_when_using_one_idx_of_forbidden_keys() -> None:
+
+    @subscriptable_rule(forbidden_keys=(3,))
+    def some_rule(obj: list[Any], key: int, value: str) -> bool: ...
+
+    rule = some_rule(3, "some value")
+
+    with pytest.raises(
+        RuleKeyDoesNotExistError,
+        match="Key '3' does not exist in the object of rule 'some_rule'",
     ):
         rule(["Abdullah", 18, True])
