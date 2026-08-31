@@ -5,7 +5,7 @@ import pytest
 from pyspecification import (
     ObjectRulesRegistry,
     RuleAlreadyRegisteredError,
-    RuleNotFoundError,
+    RuleNotRegisteredError,
     SubscriptableRulesRegistry,
 )
 
@@ -83,7 +83,7 @@ def test_obj_registry_already_registered(obj_registry: ObjectRulesRegistry[User,
 
 
 def test_obj_registry_not_registered(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
-    with pytest.raises(RuleNotFoundError) as exc:
+    with pytest.raises(RuleNotRegisteredError) as exc:
         _ = obj_registry["non_existent"]
 
     assert "Rule 'non_existent' is not registered" in str(exc.value)
@@ -180,7 +180,7 @@ def test_sub_registry_already_registered(
 def test_sub_registry_not_registered(
     sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
-    with pytest.raises(RuleNotFoundError) as exc:
+    with pytest.raises(RuleNotRegisteredError) as exc:
         _ = sub_registry["non_existent"]
 
     assert "Rule 'non_existent' is not registered" in str(exc.value)

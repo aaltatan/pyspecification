@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from pyspecification.rules import object_rule, subscriptable_rule
+from pyspecification.rules import RuleKeyDoesNotExistError, object_rule, subscriptable_rule
 
 # -----------------------
 # obj rule
@@ -87,7 +87,7 @@ def test_raising_error_when_using_key_does_not_exists_in_dict() -> None:
     rule = istartswith("does_not_exists", "some value")
 
     with pytest.raises(
-        KeyError,
+        RuleKeyDoesNotExistError,
         match="Key 'does_not_exists' does not exist in the object of rule 'istartswith'",
     ):
         rule({"name": "Abdullah", "age": 18, "is_admin": True})
@@ -133,7 +133,7 @@ def test_raising_error_when_using_idx_does_not_exists_in_list() -> None:
     rule = seq_istartswith(3, "admin")
 
     with pytest.raises(
-        KeyError,
+        RuleKeyDoesNotExistError,
         match="Key '3' does not exist in the object of rule 'seq_istartswith'",
     ):
         rule(["Abdullah", 18, True])
