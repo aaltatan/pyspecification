@@ -1,14 +1,23 @@
 [project]
 name = "pyspecification"
 version = "0.1.0"
-description = "Add your description here"
+description = "A lightweight, typed Python library for composing business rules as reusable, executable predicates."
 readme = "README.md"
 authors = [{ name = "aaltatan", email = "a.altatan@gmail.com" }]
 requires-python = ">=3.12"
 dependencies = ["pydantic>=2.13.4"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
 
 [project.scripts]
 pyspecification = "pyspecification:main"
+
+[project.urls]
+"Homepage" = "https://github.com/aaltatan/pyspecification"
+"Issues" = "https://github.com/aaltatan/pyspecification/issues"
 
 [build-system]
 requires = ["uv_build>=0.11.19,<0.12.0"]
