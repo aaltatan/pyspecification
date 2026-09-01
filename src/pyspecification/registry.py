@@ -108,6 +108,18 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
         hidden: bool = False,
     ) -> Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]:
+        """A decorator for registering an object-based rule.
+
+        Args:
+            name (str, optional): The name of the rule. Defaults to None.
+            processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
+            hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
+
+        Returns:
+            Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]: The decorator.
+
+        """  # noqa: D401, E501
+
         def decorator(fn: ObjectRuleDefinitionFn[T, R, P]) -> ObjectRuleFn[T, R, P]:
             return self._register_rule(fn, name=name, processors=processors, hidden=hidden)
 
@@ -122,6 +134,18 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
         hidden: bool = False,
     ) -> ObjectRuleFn[T, R, P]:
+        """A method for registering an object-based rule.
+
+        Args:
+            fn (ObjectRuleDefinitionFn[T, R, P]): The function to register.
+            name (str, optional): The name of the rule. Defaults to None.
+            processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
+            hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
+
+        Returns:
+            ObjectRuleFn[T, R, P]: The registered rule.
+
+        """  # noqa: D401, E501
         return self._register_rule(fn, name=name, processors=processors, hidden=hidden)
 
     def _register_rule[**P](
@@ -292,6 +316,20 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
     ) -> Callable[[SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]]:
+        """A decorator for registering a subscriptable-based rule.
+
+        Args:
+            name (str, optional): The name of the rule. Defaults to None.
+            processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
+            hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
+            check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
+            forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
+
+        Returns:
+            Callable[[SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]]: The decorator.
+
+        """  # noqa: D401, E501
+
         def decorator(
             fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         ) -> SubscriptableRuleFn[T, K, R, P]:
@@ -317,6 +355,20 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
     ) -> SubscriptableRuleFn[T, K, R, P]:
+        """A method for registering a subscriptable-based rule.
+
+        Args:
+            fn (SubscriptableRuleDefinitionFn[T, K, R, P]): The function to register.
+            name (str, optional): The name of the rule. Defaults to None.
+            processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
+            hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
+            check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
+            forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
+
+        Returns:
+            SubscriptableRuleFn[T, K, R, P]: The registered rule.
+
+        """  # noqa: D401, E501
         return self._register_rule(
             fn,
             name=name,

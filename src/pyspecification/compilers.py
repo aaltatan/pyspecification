@@ -130,6 +130,7 @@ class PredicateCompiler[T, R: ReturnType]:
         self._initial_predicate_factory = initial_predicate_factory
 
     def compile(self, expression: ExpressionDict) -> Predicate[T, R]:
+        """Compiles an expression into a predicate."""
         if is_expression_wrapper_dict(expression):
             return self._compile_wrapper(expression)
 
