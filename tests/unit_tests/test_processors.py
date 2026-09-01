@@ -4,7 +4,18 @@ from decimal import Decimal
 from typing import Any
 
 import pytest
+from pyspecification import ProcessArgumentError
 from pyspecification.processors import ProcessFn, process_arguments
+
+
+@pytest.fixture
+def processors_tuple() -> tuple[ProcessFn, dict[str, ProcessFn]]:
+    return (
+        lambda v: datetime.strptime(v, "%d-%m-%Y"),
+        {
+            "new_value": lambda v: datetime.strptime(v, "%d-%m-%Y"),
+        },
+    )
 
 
 @pytest.mark.parametrize(
@@ -81,3 +92,17 @@ def test_process_arguments(
 ) -> None:
     args, kwargs = arguments
     assert process_arguments(processors, *args, **kwargs) == expected
+
+
+def test_raises_process_argument_error(
+    processors_tuple: tuple[ProcessFn, dict[str, ProcessFn]],
+) -> None:
+    with pytest.raises(ProcessArgumentError):
+        process_arguments(processors_tuple, "xxx")
+
+
+def test_raises_process_argument_error_2(
+    processors_tuple: tuple[ProcessFn, dict[str, ProcessFn]],
+) -> None:
+    with pytest.raises(ProcessArgumentError):
+        process_arguments(processors_tuple, new_value="xxx")
