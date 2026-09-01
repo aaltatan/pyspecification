@@ -1,6 +1,7 @@
 from .compilers import ExpressionWrapperDict, PredicateCompiler, PredicateDict
 from .exceptions import (
     CompilationError,
+    ProcessArgumentError,
     RuleAlreadyRegisteredError,
     RuleKeyDoesNotExistError,
     RuleNotRegisteredError,
@@ -19,6 +20,7 @@ __all__ = [
     "Predicate",
     "PredicateCompiler",
     "PredicateDict",
+    "ProcessArgumentError",
     "RuleAlreadyRegisteredError",
     "RuleKeyDoesNotExistError",
     "RuleNotRegisteredError",
