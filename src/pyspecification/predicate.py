@@ -128,7 +128,7 @@ class Predicate[T, R: ReturnType]:
         )
 
     def __str__(self) -> str:
-        return self._description or self._fn.__name__ or "Predicate"
+        return self._description or self._fn.__name__
 
     def __repr__(self) -> str:
         return f"Predicate({self})"
