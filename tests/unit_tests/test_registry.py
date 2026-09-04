@@ -156,6 +156,26 @@ def test_description_obj(
     assert some_rule_4.__doc__ == "This is overridden description 2"
 
 
+def test_obj_registry_repr(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
+    @obj_registry.rule()
+    def name__startswith(user: User, value: str) -> bool: ...
+
+    def name__endswith_fn(user: User, value: str) -> bool: ...
+
+    name__endswith = obj_registry.register_rule(name__endswith_fn)
+
+    name__contains = obj_registry.register_rule(lambda _: True, name="name__contains")
+
+    rule = name__startswith("Abdullah") | (name__endswith("Abdullah") & name__contains())
+
+    assert repr(rule) == "Predicate((name__startswith OR (name__endswith_fn AND name__contains)))"
+
+
+def test_obj_registry_with_lambda(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
+    with pytest.raises(ValueError, match="You must provide a name for the rule"):
+        obj_registry.register_rule(lambda _: True)
+
+
 # -----------------------
 # dict tests
 # -----------------------

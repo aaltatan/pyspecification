@@ -77,6 +77,51 @@ def test_repr(
     )
 
 
+def test_repr_with_lambda_with_description() -> None:
+    is_admin: Predicate[User, bool] = Predicate(
+        lambda user: user.is_admin,
+        operator="logical",
+        name="is_admin",
+    )
+
+    name_istartswith_admin: Predicate[User, bool] = Predicate(
+        lambda user: user.name.lower().startswith("admin"),
+        operator="logical",
+        name="name_istartswith_admin",
+    )
+
+    is_adult: Predicate[User, bool] = Predicate(
+        lambda user: user.age >= 18 and user.age <= 30,
+        operator="logical",
+        name="is_adult",
+    )
+
+    rule = is_admin | (name_istartswith_admin & is_adult)
+
+    assert repr(rule) == "Predicate((is_admin OR (name_istartswith_admin AND is_adult)))"
+
+
+def test_repr_with_lambda_with_no_description() -> None:
+    is_admin: Predicate[User, bool] = Predicate(
+        lambda user: user.is_admin,
+        operator="logical",
+    )
+
+    name_istartswith_admin: Predicate[User, bool] = Predicate(
+        lambda user: user.name.lower().startswith("admin"),
+        operator="logical",
+    )
+
+    is_adult: Predicate[User, bool] = Predicate(
+        lambda user: user.age >= 18 and user.age <= 30,
+        operator="logical",
+    )
+
+    rule = is_admin | (name_istartswith_admin & is_adult)
+
+    assert repr(rule) == "Predicate((anonymous OR (anonymous AND anonymous)))"
+
+
 @pytest.mark.parametrize(
     "user, expected",
     [
