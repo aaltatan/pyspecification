@@ -2,7 +2,15 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from .exceptions import RuleKeyDoesNotExistError
+from .exceptions import (
+    MissingArgumentError,
+    RuleKeyDoesNotExistError,
+    TooManyArgumentsError,
+    UnexpectedKeywordArgumentError,
+    is_missing_argument_exception,
+    is_too_many_arguments_exception,
+    is_unexpected_keyword_argument_exception,
+)
 from .predicate import OperatorType, Predicate, ReturnType
 
 
@@ -74,7 +82,19 @@ def object_rule[T, R: ReturnType, **P](
 
             @wraps(fn)
             def inner(obj: T) -> R:
-                return fn(obj, *args, **kwargs)
+                try:
+                    return fn(obj, *args, **kwargs)
+                except TypeError as e:
+                    if is_missing_argument_exception(e):
+                        raise MissingArgumentError(str(e)) from e
+
+                    if is_unexpected_keyword_argument_exception(e):
+                        raise UnexpectedKeywordArgumentError(str(e)) from e
+
+                    if is_too_many_arguments_exception(e):
+                        raise TooManyArgumentsError(str(e)) from e
+
+                    raise
 
             return Predicate(inner, operator=operator)
 
@@ -157,7 +177,19 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
                 if any(checker() for checker in checkers):
                     raise RuleKeyDoesNotExistError(str(key), fn.__name__)
 
-                return fn(obj, key, *args, **kwargs)
+                try:
+                    return fn(obj, key, *args, **kwargs)
+                except TypeError as e:
+                    if is_missing_argument_exception(e):
+                        raise MissingArgumentError(str(e)) from e
+
+                    if is_unexpected_keyword_argument_exception(e):
+                        raise UnexpectedKeywordArgumentError(str(e)) from e
+
+                    if is_too_many_arguments_exception(e):
+                        raise TooManyArgumentsError(str(e)) from e
+
+                    raise
 
             return Predicate(inner, operator=operator)
 
