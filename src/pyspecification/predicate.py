@@ -72,10 +72,10 @@ class Predicate[T, R: ReturnType]:
         /,
         *,
         operator: OperatorType,
-        description: str | None = None,
+        name: str | None = None,
     ) -> None:
         self._fn = fn
-        self._description = description
+        self._name = name
         self._operator = operator
 
     def __call__(self, obj: T) -> R:
@@ -87,13 +87,13 @@ class Predicate[T, R: ReturnType]:
         if self._operator == "bitwise":
             return Predicate(
                 lambda obj: self(obj) & other(obj),
-                description=f"({self} & {other})",
+                name=f"({self} & {other})",
                 operator="bitwise",
             )
 
         return Predicate(
             lambda obj: self(obj) and other(obj),
-            description=f"({self} AND {other})",
+            name=f"({self} AND {other})",
             operator="logical",
         )
 
@@ -103,13 +103,13 @@ class Predicate[T, R: ReturnType]:
         if self._operator == "bitwise":
             return Predicate(
                 lambda obj: self(obj) | other(obj),
-                description=f"({self} | {other})",
+                name=f"({self} | {other})",
                 operator="bitwise",
             )
 
         return Predicate(
             lambda obj: self(obj) or other(obj),
-            description=f"({self} OR {other})",
+            name=f"({self} OR {other})",
             operator="logical",
         )
 
@@ -117,13 +117,13 @@ class Predicate[T, R: ReturnType]:
         if self._operator == "bitwise":
             return Predicate(
                 lambda obj: ~self(obj),
-                description=f"~{self}",
+                name=f"~{self}",
                 operator="bitwise",
             )
 
         return Predicate(
             lambda obj: not self(obj),  # type: ignore
-            description=f"NOT {self}",
+            name=f"NOT {self}",
             operator="logical",
         )
 
