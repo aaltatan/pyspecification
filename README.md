@@ -187,7 +187,49 @@ This pattern is ideal for filtering dictionaries and JSON-like records.
 
 ---
 
-### 4. SQLAlchemy integration example
+### 4. Registry metadata
+
+Registries expose `name` and `description` overrides on both `rule()` and
+`register_rule()`. The name becomes the lookup key and the predicate name;
+the description becomes the registered function's docstring.
+
+```python
+from pyspecification import ObjectRulesRegistry
+
+
+rules = ObjectRulesRegistry[User, bool](operator="logical")
+
+
+@rules.rule(
+    name="adult_user",
+    description="Whether the user is at least 18 years old.",
+)
+def is_adult(user: User) -> bool:
+    return user.age >= 18
+
+
+def is_admin(user: User) -> bool:
+    return user.is_admin
+
+
+rules.register_rule(
+    is_admin,
+    name="administrator",
+    description="Whether the user has administrator access.",
+)
+
+rule = rules["adult_user"]()
+print(rule(User(name="Abdullah", age=25, is_admin=True)))  # True
+print(rule)  # adult_user
+print(rules["administrator"].__doc__)  # The overridden description
+```
+
+When an override is omitted, the function name and docstring are retained.
+The same options are available on `SubscriptableRulesRegistry`.
+
+---
+
+### 5. SQLAlchemy integration example
 
 One of the strongest real-world use cases is turning rule definitions into SQLAlchemy filter expressions for database queries.
 
