@@ -340,7 +340,7 @@ If conversion fails, the library raises `ProcessArgumentError`.
 ```python
 from dataclasses import dataclass
 
-from pyspecification import Predicate, PredicateCompiler, object_rule
+from pyspecification import Predicate, PredicateCompiler, RuleSchema, object_rule
 
 
 @dataclass
@@ -389,13 +389,163 @@ rule_data = {
     ],
 }
 
-predicate = compiler.compile(rule_data)
+predicate = compiler.compile(RuleSchema(**rule_data).model_dump())
 print(predicate(User("admin", 25, True)))  # True
 ```
 
-### Supported structured syntax
+### Predicate schema
 
-Simple predicate forms:
+`PredicateCompiler.compile()` consumes the normalized dictionary produced by
+`RuleSchema(...).model_dump()`. A predicate schema always has four keys:
+
+```json
+{
+    "name": "rule_name",
+    "args": [],
+    "kwargs": {},
+    "inverse": false
+}
+```
+
+The `name` must be present in the dictionary of rules passed to the compiler.
+Use `args` for positional arguments and `kwargs` for keyword arguments. These
+examples assume the rules from the previous section:
+
+```json
+{
+    "name": "is_admin",
+    "args": [],
+    "kwargs": {},
+    "inverse": false
+}
+```
+
+```json
+{
+    "name": "name__istartswith",
+    "args": ["admin"],
+    "kwargs": {},
+    "inverse": false
+}
+```
+
+```json
+{
+    "name": "age__between",
+    "args": [],
+    "kwargs": {"min_age": 18, "max_age": 30},
+    "inverse": false
+}
+```
+
+Set `inverse` to `true` to negate one predicate:
+
+```json
+{
+    "name": "is_admin",
+    "args": [],
+    "kwargs": {},
+    "inverse": true
+}
+```
+
+The normalized schema is convenient when rule definitions arrive as JSON:
+
+```python
+import json
+
+rule_json = '{"name": "age__between", "args": [18, 30], "kwargs": {}, "inverse": false}'
+rule_data = json.loads(rule_json)
+predicate = compiler.compile(rule_data)
+```
+
+### Expression wrapper schema
+
+Use a wrapper to combine predicates. A wrapper has an `operator`, an
+`expressions` list, and an `inverse` flag:
+
+```json
+{
+    "operator": "and",
+    "expressions": [
+        {
+            "name": "is_admin",
+            "args": [],
+            "kwargs": {},
+            "inverse": false
+        },
+        {
+            "name": "age__between",
+            "args": [18, 30],
+            "kwargs": {},
+            "inverse": false
+        }
+    ],
+    "inverse": false
+}
+```
+
+`operator` must be either `"and"` or `"or"`. Expressions can be nested to
+represent more complex logic:
+
+```json
+{
+    "operator": "or",
+    "expressions": [
+        {
+            "name": "is_admin",
+            "args": [],
+            "kwargs": {},
+            "inverse": false
+        },
+        {
+            "operator": "and",
+            "expressions": [
+                {
+                    "name": "name__istartswith",
+                    "args": ["admin"],
+                    "kwargs": {},
+                    "inverse": false
+                },
+                {
+                    "name": "age__between",
+                    "args": [],
+                    "kwargs": {"min_age": 18, "max_age": 30},
+                    "inverse": false
+                }
+            ],
+            "inverse": false
+        }
+    ],
+    "inverse": false
+}
+```
+
+You can also invert a complete wrapper:
+
+```json
+{
+    "operator": "or",
+    "expressions": [
+        {
+            "name": "is_admin",
+            "args": [],
+            "kwargs": {},
+            "inverse": false
+        },
+        {
+            "name": "age__between",
+            "args": [18, 30],
+            "kwargs": {},
+            "inverse": false
+        }
+    ],
+    "inverse": true
+}
+```
+
+For shorthand forms, validate the payload with `RuleSchema` first. It converts
+them into the normalized predicate and wrapper schemas:
 
 ```python
 {"is_admin": []}
@@ -405,32 +555,12 @@ Simple predicate forms:
 {"name__startswith": {"value": "admin"}}
 ```
 
-Nested expressions:
-
-```python
-{
-    "operator": "and",
-    "expressions": [
-        {"is_admin": []},
-        {"name__istartswith": "admin"},
-    ],
-}
-```
-
-And inverted wrappers:
-
-```python
-{
-    "operator": "or",
-    "inverse": True,
-    "expressions": [
-        {"is_admin": []},
-        {"age__between": [18, 30]},
-    ],
-}
-```
-
-The compiler raises `CompilationError` if a rule name is missing or the payload is malformed.
+The compiler raises `RuleDoesNotExistError` when a predicate name is not in the
+compiler's rule mapping. If the dictionary passed directly to `compile()` does
+not match a predicate or wrapper schema, it raises `TypeError`. The error
+includes the location of the invalid expression, the expected schemas, and the
+received value. Validate external or shorthand payloads with `RuleSchema`
+before compilation.
 
 ---
 
@@ -659,13 +789,31 @@ If you load rules from external sources, validate them via `RuleSchema` before c
 
 The library raises explicit exceptions for rule issues:
 
-- `RuleNotRegisteredError`
+- `RuleDoesNotExistError`
 - `RuleAlreadyRegisteredError`
 - `RuleKeyDoesNotExistError`
-- `CompilationError`
+- `ArgumentError`
+- `MissingArgumentError`
+- `UnexpectedKeywordArgumentError`
+- `TooManyArgumentsError`
 - `ProcessArgumentError`
 
-These are especially useful when rules are dynamically loaded or assembled from user input.
+`ArgumentError` is the base class for failures involving arguments passed to a
+rule. Its specialized exceptions describe the problem:
+
+- `MissingArgumentError` means a required positional or keyword-only argument
+    was not provided.
+- `UnexpectedKeywordArgumentError` means a keyword does not belong to the
+    rule's signature.
+- `TooManyArgumentsError` means more positional arguments were provided than
+    the rule accepts.
+- `ProcessArgumentError` means an argument processor could not convert or
+    otherwise process a value.
+
+`RuleDoesNotExistError` includes the missing name and the available rule names,
+which is useful when rules are dynamically loaded. Malformed normalized
+compiler payloads raise `TypeError`; its message identifies the JSON-like path
+of the invalid expression and shows the expected schemas.
 
 ---
 
