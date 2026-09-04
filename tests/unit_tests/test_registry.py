@@ -5,7 +5,7 @@ import pytest
 from pyspecification import (
     ObjectRulesRegistry,
     RuleAlreadyRegisteredError,
-    RuleNotRegisteredError,
+    RuleDoesNotExistError,
     SubscriptableRulesRegistry,
 )
 from pyspecification.exceptions import RuleKeyDoesNotExistError
@@ -84,10 +84,10 @@ def test_obj_registry_already_registered(obj_registry: ObjectRulesRegistry[User,
 
 
 def test_obj_registry_not_registered(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
-    with pytest.raises(RuleNotRegisteredError) as exc:
+    with pytest.raises(RuleDoesNotExistError) as exc:
         _ = obj_registry["non_existent"]
 
-    assert "Rule 'non_existent' is not registered" in str(exc.value)
+    assert "Rule 'non_existent' does not exist" in str(exc.value)
 
 
 def test_obj_registry_reserved_word(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
@@ -128,7 +128,7 @@ def test_raising_error_when_using_hidden_rule(
 
     assert "some_rule" not in obj_registry.rules
 
-    with pytest.raises(RuleNotRegisteredError, match="Rule 'some_rule' is not registered"):
+    with pytest.raises(RuleDoesNotExistError, match="Rule 'some_rule' does not exist"):
         obj_registry["some_rule"]
 
 
@@ -193,10 +193,10 @@ def test_sub_registry_already_registered(
 def test_sub_registry_not_registered(
     sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
-    with pytest.raises(RuleNotRegisteredError) as exc:
+    with pytest.raises(RuleDoesNotExistError) as exc:
         _ = sub_registry["non_existent"]
 
-    assert "Rule 'non_existent' is not registered" in str(exc.value)
+    assert "Rule 'non_existent' does not exist" in str(exc.value)
 
 
 def test_sub_registry_reserved_word(
@@ -259,5 +259,5 @@ def test_raising_error_when_using_hidden_rule_2(
 
     assert "some_rule" not in sub_registry.rules
 
-    with pytest.raises(RuleNotRegisteredError, match="Rule 'some_rule' is not registered"):
+    with pytest.raises(RuleDoesNotExistError, match="Rule 'some_rule' does not exist"):
         sub_registry["some_rule"]

@@ -2,7 +2,15 @@ from collections.abc import Generator
 from typing import Any
 
 import pytest
-from pyspecification import ObjectRulesRegistry, Predicate, PredicateCompiler, RuleSchema
+from pyspecification import (
+    MissingArgumentError,
+    ObjectRulesRegistry,
+    Predicate,
+    PredicateCompiler,
+    RuleSchema,
+    TooManyArgumentsError,
+    UnexpectedKeywordArgumentError,
+)
 from sqlalchemy import ColumnElement, and_, create_engine, or_
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
@@ -18,6 +26,13 @@ class User(Base):
     name: Mapped[str]
     age: Mapped[int] = mapped_column(default=0)
     is_admin: Mapped[bool] = mapped_column(default=False)
+
+
+class AnotherUser(Base):
+    __tablename__ = "another_users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
 
 
 engine = create_engine("sqlite:///:memory:")
@@ -55,31 +70,38 @@ def create_db_and_add_users(session: Session) -> Generator[None, None, None]:
     Base.metadata.drop_all(engine)
 
 
-rules = ObjectRulesRegistry[type[User], ColumnElement[bool]](operator="bitwise")
+@pytest.fixture
+def rules() -> ObjectRulesRegistry[type[User], ColumnElement[bool]]:
+    rules = ObjectRulesRegistry[type[User], ColumnElement[bool]](operator="bitwise")
 
+    @rules.rule()
+    def is_admin(model: type[User]) -> ColumnElement[bool]:
+        return model.is_admin == True  # noqa: E712
 
-@rules.rule()
-def is_admin(model: type[User]) -> ColumnElement[bool]:
-    return model.is_admin == True  # noqa: E712
+    @rules.rule()
+    def name__iendswith(model: type[User], value: str) -> ColumnElement[bool]:
+        return model.name.iendswith(value)
 
+    @rules.rule()
+    def age__ge(model: type[User], value: int) -> ColumnElement[bool]:
+        return model.age >= value
 
-@rules.rule()
-def name__iendswith(model: type[User], value: str) -> ColumnElement[bool]:
-    return model.name.iendswith(value)
+    @rules.rule()
+    def age__le(model: type[User], value: int) -> ColumnElement[bool]:
+        return model.age <= value
 
+    @rules.rule()
+    def name__istartswith(model: type[User], *, value: str) -> ColumnElement[bool]: ...
+    @rules.rule()
+    def name__icontains(model: type[User], value: str) -> ColumnElement[bool]: ...
 
-@rules.rule()
-def age__ge(model: type[User], value: int) -> ColumnElement[bool]:
-    return model.age >= value
-
-
-@rules.rule()
-def age__le(model: type[User], value: int) -> ColumnElement[bool]:
-    return model.age <= value
+    return rules
 
 
 @pytest.fixture
-def sqlalchemy_compiler() -> PredicateCompiler[type[User], ColumnElement[bool]]:
+def sqlalchemy_compiler(
+    rules: ObjectRulesRegistry[type[User], ColumnElement[bool]],
+) -> PredicateCompiler[type[User], ColumnElement[bool]]:
     return PredicateCompiler(
         rules.rules,
         lambda schema: Predicate(
@@ -148,3 +170,35 @@ def test_filtering_system(
     # Act & Assert
     assert tuple([user.name for user in filtered_data]) == expected_names
     assert len(filtered_data) == len(expected_names)
+
+
+@pytest.mark.parametrize(
+    "filter_rule_data, exception_class",
+    [
+        # def string__istartswith(obj: type[User], *, value: str) -> bool:
+        ({"name__istartswith": []}, MissingArgumentError),
+        ({"name__istartswith": ["a", "xxx"]}, TooManyArgumentsError),
+        ({"name__istartswith": {}}, MissingArgumentError),
+        ({"name__istartswith": {"value_not_exists": "sss"}}, UnexpectedKeywordArgumentError),
+        (
+            {"name__istartswith": {"value": "a", "value_not_exists": "sss"}},
+            UnexpectedKeywordArgumentError,
+        ),
+        # def string__icontains(obj: type[User], value: str) -> bool:
+        ({"name__icontains": []}, MissingArgumentError),
+        ({"name__icontains": ["a", "xxx"]}, TooManyArgumentsError),
+        ({"name__icontains": {"value_not_exists": "sss"}}, UnexpectedKeywordArgumentError),
+        (
+            {"name__icontains": {"value": "a", "value_not_exists": "sss"}},
+            UnexpectedKeywordArgumentError,
+        ),
+    ],
+)
+def test_filtering_system_with_invalid_inputs(
+    filter_rule_data: dict[str, Any],
+    exception_class: type[Exception],
+    sqlalchemy_compiler: PredicateCompiler[type[User], ColumnElement[bool]],
+) -> None:
+    with pytest.raises(exception_class):
+        predicate = sqlalchemy_compiler.compile(RuleSchema(**filter_rule_data).model_dump())
+        predicate(User)

@@ -2,7 +2,13 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from pyspecification import CompilationError, Predicate, PredicateCompiler, RuleSchema, object_rule
+from pyspecification import (
+    Predicate,
+    PredicateCompiler,
+    RuleDoesNotExistError,
+    RuleSchema,
+    object_rule,
+)
 
 from tests.models import CompilerGetter
 
@@ -134,15 +140,46 @@ def test_compiler_with_invalid_rule_name(
     compiler: PredicateCompiler[User, bool],
     rule_dict: dict[str, Any],
 ) -> None:
-    with pytest.raises(CompilationError, match="Rule 'rule_not_exists' is not found"):
+    with pytest.raises(RuleDoesNotExistError, match="Rule 'rule_not_exists' does not exist"):
         compiler.compile(RuleSchema(**rule_dict).model_dump())
 
 
 def test_compiler_with_invalid_rule_dict(compiler: PredicateCompiler) -> None:
-    with pytest.raises(CompilationError, match="Invalid expression type"):
+    with pytest.raises(TypeError) as error:
         compiler.compile(
             {
                 "name__istartswith": "dasdads",
                 "rule_not_exists": [],  # type: ignore  # noqa: PGH003
             },
         )
+
+    message = str(error.value)
+    assert "Invalid expression at $." in message
+    assert "Predicate:" in message
+    assert "Expression wrapper:" in message
+    assert "Received:" in message
+
+
+def test_compiler_reports_nested_invalid_expression_path(
+    compiler: PredicateCompiler,
+) -> None:
+    with pytest.raises(TypeError, match=r"Invalid expression at \$\.expressions\[1\]"):
+        compiler.compile(
+            {
+                "operator": "and",
+                "inverse": False,
+                "expressions": [
+                    {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
+                    {"unexpected": True, "another": False},
+                ],
+            },  # type: ignore  # noqa: PGH003
+        )
+
+
+@pytest.mark.parametrize("expression", [None, "invalid", 42])
+def test_compiler_reports_invalid_non_dict_expression(
+    compiler: PredicateCompiler,
+    expression: Any,
+) -> None:
+    with pytest.raises(TypeError, match=r"Invalid expression at \$\."):
+        compiler.compile(expression)  # type: ignore[arg-type]

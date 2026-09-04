@@ -47,6 +47,12 @@ def test_is_admin_rule(user: User, expected: bool) -> None:  # noqa: FBT001
     assert admin_rule_v1(user) == expected
 
 
+def test_raising_error_when_comparing_wrong_types() -> None:
+    with pytest.raises(TypeError):
+        rule = age__between("2", "3")  # type: ignore  # noqa: PGH003
+        rule(User(name="Abdullah", age=18, is_admin=True))
+
+
 # -----------------------
 # dict rule
 # -----------------------

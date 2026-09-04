@@ -4,10 +4,14 @@ from typing import Any
 
 import pytest
 from pyspecification import (
+    MissingArgumentError,
     PredicateCompiler,
     ProcessArgumentError,
+    RuleDoesNotExistError,
     RuleSchema,
     SubscriptableRulesRegistry,
+    TooManyArgumentsError,
+    UnexpectedKeywordArgumentError,
 )
 
 from tests.models import CompilerGetter
@@ -89,6 +93,11 @@ def rules() -> SubscriptableRulesRegistry[dict[str, Any], str, bool]:
     def datetime__ge(obj: dict[str, Any], key: str, value: datetime) -> bool:
         return obj[key] >= value
 
+    @rules.rule()
+    def string__istartswith(obj: dict[str, Any], key: str, *, value: str) -> bool: ...
+    @rules.rule()
+    def string__icontains(obj: dict[str, Any], key: str, value: str) -> bool: ...
+
     return rules
 
 
@@ -137,6 +146,63 @@ def test_filtering_system(
 
     assert all(item["name"] in expected_names for item in filtered_data)
     assert len(filtered_data) == len(expected_names)
+
+
+@pytest.mark.parametrize(
+    "filter_rule_data, exception_class",
+    [
+        # def string__istartswith(obj: dict[str, Any], key: str, *, value: str) -> bool:
+        ({"string__istartswith": []}, MissingArgumentError),
+        ({"string__istartswith": ["name"]}, MissingArgumentError),
+        ({"string__istartswith": ["name", "a"]}, TooManyArgumentsError),
+        ({"string__istartswith": ["name", "a", "xxx"]}, TooManyArgumentsError),
+        ({"string__istartswith": {}}, MissingArgumentError),
+        ({"string__istartswith": {"key": "name"}}, MissingArgumentError),
+        ({"string__istartswith": {"value", "ssss"}}, MissingArgumentError),
+        (
+            {"string__istartswith": {"key": "name", "value_not_exists": "sss"}},
+            UnexpectedKeywordArgumentError,
+        ),
+        (
+            {"string__istartswith": {"key": "name", "value": "a", "value_not_exists": "sss"}},
+            UnexpectedKeywordArgumentError,
+        ),
+        # def string__icontains(obj: dict[str, Any], key: str, value: str) -> bool:
+        ({"string__icontains": []}, MissingArgumentError),
+        ({"string__icontains": ["name"]}, MissingArgumentError),
+        ({"string__icontains": ["name", "a", "xxx"]}, TooManyArgumentsError),
+        ({"string__icontains": {}}, MissingArgumentError),
+        ({"string__icontains": {"key": "name"}}, MissingArgumentError),
+        ({"string__icontains": {"value", "ssss"}}, MissingArgumentError),
+        (
+            {"string__icontains": {"key": "name", "value_not_exists": "sss"}},
+            UnexpectedKeywordArgumentError,
+        ),
+        (
+            {"string__icontains": {"key": "name", "value": "a", "value_not_exists": "sss"}},
+            UnexpectedKeywordArgumentError,
+        ),
+    ],
+)
+def test_filtering_system_with_invalid_inputs(
+    filter_rule_data: dict[str, Any],
+    exception_class: type[Exception],
+    compiler: PredicateCompiler[dict[str, Any], bool],
+) -> None:
+    with pytest.raises(exception_class):
+        predicate = compiler.compile(RuleSchema(**filter_rule_data).model_dump())
+        predicate({"name": "Abdullah", "age": 18, "is_admin": True})
+
+
+def test_filtering_system_with_invalid_rule_name(
+    compiler: PredicateCompiler[dict[str, Any], bool],
+) -> None:
+    with pytest.raises(RuleDoesNotExistError, match="Rule 'invalid_rule' does not exist"):
+        compiler.compile(
+            RuleSchema(
+                **{"invalid_rule": ["birthdate", "06-01-2001"]}  # type: ignore  # noqa: PGH003, PIE804
+            ).model_dump()
+        )
 
 
 def test_filtering_system_with_invalid_datetime_format_arg(
