@@ -128,7 +128,13 @@ class Predicate[T, R: ReturnType]:
         )
 
     def __str__(self) -> str:
-        return self._description or self._fn.__name__
+        if self._name is not None:
+            return self._name
+
+        if self._fn.__name__ == "<lambda>":
+            return "anonymous"
+
+        return self._fn.__name__
 
     def __repr__(self) -> str:
         return f"Predicate({self})"
