@@ -1,10 +1,13 @@
 from .compilers import ExpressionWrapperDict, PredicateCompiler, PredicateDict
 from .exceptions import (
-    CompilationError,
+    ArgumentError,
+    MissingArgumentError,
     ProcessArgumentError,
     RuleAlreadyRegisteredError,
+    RuleDoesNotExistError,
     RuleKeyDoesNotExistError,
-    RuleNotRegisteredError,
+    TooManyArgumentsError,
+    UnexpectedKeywordArgumentError,
 )
 from .json_schema import get_json_schema
 from .predicate import OperatorType, Predicate
@@ -13,8 +16,9 @@ from .rules import object_rule, subscriptable_rule
 from .schemas import RuleSchema
 
 __all__ = [
-    "CompilationError",
+    "ArgumentError",
     "ExpressionWrapperDict",
+    "MissingArgumentError",
     "ObjectRulesRegistry",
     "OperatorType",
     "Predicate",
@@ -22,10 +26,12 @@ __all__ = [
     "PredicateDict",
     "ProcessArgumentError",
     "RuleAlreadyRegisteredError",
+    "RuleDoesNotExistError",
     "RuleKeyDoesNotExistError",
-    "RuleNotRegisteredError",
     "RuleSchema",
     "SubscriptableRulesRegistry",
+    "TooManyArgumentsError",
+    "UnexpectedKeywordArgumentError",
     "get_json_schema",
     "object_rule",
     "subscriptable_rule",
