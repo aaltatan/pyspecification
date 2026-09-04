@@ -17,11 +17,13 @@ from .predicate import OperatorType, Predicate, ReturnType
 def object_rule[T, R: ReturnType, **P](
     *,
     operator: OperatorType = "logical",
+    predicate_name: str | None = None,
 ) -> Callable[[Callable[Concatenate[T, P], R]], Callable[P, Predicate[T, R]]]:
     """A Decorator for creating object-based rules.
 
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
+        predicate_name (str, optional): The name of the predicate. Defaults to None.
 
     Example:
     ```python
@@ -96,7 +98,7 @@ def object_rule[T, R: ReturnType, **P](
 
                     raise
 
-            return Predicate(inner, operator=operator)
+            return Predicate(inner, operator=operator, name=predicate_name)
 
         return wrapper
 
@@ -106,6 +108,7 @@ def object_rule[T, R: ReturnType, **P](
 def subscriptable_rule[T, K, R: ReturnType, **P](
     *,
     operator: OperatorType = "logical",
+    predicate_name: str | None = None,
     check_key_existence: bool = False,
     forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
 ) -> Callable[[Callable[Concatenate[T, K, P], R]], Callable[Concatenate[K, P], Predicate[T, R]]]:
@@ -113,6 +116,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
+        predicate_name (str, optional): The name of the predicate. Defaults to None.
         check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to False.
         forbidden_keys (set[str], optional): A set of keys that are not allowed in the dictionary. Defaults to None.
 
@@ -191,7 +195,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
                     raise
 
-            return Predicate(inner, operator=operator)
+            return Predicate(inner, operator=operator, name=predicate_name)
 
         return wrapper
 
