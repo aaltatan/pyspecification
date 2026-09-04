@@ -4,7 +4,7 @@ from functools import wraps
 from typing import Any, Concatenate
 
 from .constants import RESERVED_WORDS
-from .exceptions import RuleAlreadyRegisteredError, RuleNotRegisteredError
+from .exceptions import RuleAlreadyRegisteredError, RuleDoesNotExistError
 from .predicate import OperatorType, Predicate, ReturnType
 from .processors import DEFAULT_PROCESSORS, ProcessFn, process_arguments
 from .rules import object_rule, subscriptable_rule
@@ -98,7 +98,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
 
     def __getitem__(self, name: str) -> ObjectRuleFn[T, R, ...]:
         if name not in self._rules or name in self._hidden:
-            raise RuleNotRegisteredError(name)
+            raise RuleDoesNotExistError(name, self.rules.keys())
         return self._rules[name]
 
     def rule[**P](
@@ -304,7 +304,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
 
     def __getitem__(self, name: str) -> SubscriptableRuleFn[T, K, R, ...]:
         if name not in self._rules or name in self._hidden:
-            raise RuleNotRegisteredError(name)
+            raise RuleDoesNotExistError(name, self.rules.keys())
         return self._rules[name]
 
     def rule[**P](
