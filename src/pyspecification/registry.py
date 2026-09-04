@@ -90,6 +90,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
 
     @property
     def rules(self) -> dict[str, ObjectRuleFn[T, R, ...]]:
+        """A dictionary of registered rules."""
         return {
             rule_name: rule
             for rule_name, rule in self._rules.items()
@@ -315,6 +316,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
 
     @property
     def rules(self) -> dict[str, SubscriptableRuleFn[T, K, R, ...]]:
+        """A dictionary of registered rules."""
         return {
             rule_name: rule
             for rule_name, rule in self._rules.items()
