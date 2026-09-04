@@ -1,7 +1,11 @@
+import json
 from collections.abc import Callable
+from pprint import pformat
 from typing import Any, Literal, TypedDict, TypeGuard
 
-from .exceptions import CompilationError
+from pydantic import TypeAdapter
+
+from .exceptions import MissingArgumentError, RuleDoesNotExistError, is_missing_argument_exception
 from .predicate import Predicate, ReturnType
 
 type ExpressionDict = ExpressionWrapperDict | PredicateDict
@@ -28,15 +32,21 @@ class ExpressionWrapperDict(TypedDict):
     inverse: bool
 
 
-def is_predicate_dict(d: ExpressionDict | dict[str, Any]) -> TypeGuard[PredicateDict]:
-    return all(key in d for key in PREDICATE_DICT_KEYS) and len(d) == len(PREDICATE_DICT_KEYS)
+def is_predicate_dict(d: Any) -> TypeGuard[PredicateDict]:
+    return (
+        isinstance(d, dict)
+        and all(key in d for key in PREDICATE_DICT_KEYS)
+        and len(d) == len(PREDICATE_DICT_KEYS)
+    )
 
 
 def is_expression_wrapper_dict(
-    d: ExpressionDict | dict[str, Any],
+    d: Any,
 ) -> TypeGuard[ExpressionWrapperDict]:
-    return all(key in d for key in EXPRESSION_WRAPPER_DICT_KEYS) and len(d) == len(
-        EXPRESSION_WRAPPER_DICT_KEYS
+    return (
+        isinstance(d, dict)
+        and all(key in d for key in EXPRESSION_WRAPPER_DICT_KEYS)
+        and len(d) == len(EXPRESSION_WRAPPER_DICT_KEYS)
     )
 
 
@@ -131,40 +141,38 @@ class PredicateCompiler[T, R: ReturnType]:
 
     def compile(self, expression: ExpressionDict) -> Predicate[T, R]:
         """Compiles an expression into a predicate."""
+        return self._compile(expression, path="$")
+
+    def _compile(self, expression: ExpressionDict, path: str) -> Predicate[T, R]:
         if is_expression_wrapper_dict(expression):
-            return self._compile_wrapper(expression)
+            return self._compile_wrapper(expression, path)
 
         if is_predicate_dict(expression):
             return self._compile_single(expression)
 
-        msg = (
-            f"Invalid expression type: {expression}\n"
-            f"Expected one of\n"
-            "{'expressions': list[ExpressionDict], 'inverse': bool, 'operator': Literal['and', 'or']}\n"  # noqa: E501
-            "or \n{'name': str, 'inverse': bool, 'args': list, 'kwargs': dict}"
-        )
-        raise CompilationError(msg)
+        raise TypeError(_invalid_expression_message(expression, path))
 
     def _compile_single(self, single: PredicateDict) -> Predicate[T, R]:
         if single["name"] not in self._rules:
-            msg = (
-                f"Rule '{single['name']}' is not found\n"
-                f"Available rules: {', '.join(self._rules.keys())}"
-            )
-            raise CompilationError(msg)
+            raise RuleDoesNotExistError(single["name"], self._rules.keys())
 
-        predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
+        try:
+            predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
+        except TypeError as e:
+            if is_missing_argument_exception(e):
+                raise MissingArgumentError(str(e)) from e
+            raise
 
         if single["inverse"]:
             predicate = ~predicate
 
         return predicate
 
-    def _compile_wrapper(self, wrapper: ExpressionWrapperDict) -> Predicate[T, R]:
+    def _compile_wrapper(self, wrapper: ExpressionWrapperDict, path: str) -> Predicate[T, R]:
         predicate = self._initial_predicate_factory(wrapper)
 
-        for expression in wrapper["expressions"]:
-            compiled_predicate = self.compile(expression)
+        for index, expression in enumerate(wrapper["expressions"]):
+            compiled_predicate = self._compile(expression, f"{path}.expressions[{index}]")
 
             if wrapper["operator"] == "and":
                 predicate &= compiled_predicate
@@ -175,3 +183,21 @@ class PredicateCompiler[T, R: ReturnType]:
             predicate = ~predicate
 
         return predicate
+
+
+def _invalid_expression_message(expression: Any, path: str) -> str:
+    return "\n".join(
+        [
+            f"Invalid expression at {path}.",
+            "Expected an expression matching one of these schemas:",
+            "",
+            "Predicate:",
+            json.dumps(TypeAdapter(PredicateDict).json_schema(), indent=2),
+            "",
+            "Expression wrapper:",
+            json.dumps(TypeAdapter(ExpressionWrapperDict).json_schema(), indent=2),
+            "",
+            "Received:",
+            pformat(expression, sort_dicts=False, width=88),
+        ],
+    )
