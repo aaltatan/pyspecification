@@ -185,9 +185,10 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
             processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
-            return object_rule(operator=self._operator)(fn)(  # type: ignore  # noqa: PGH003
-                *processed_args, **processed_kwargs
-            )
+            return object_rule(
+                operator=self._operator,  # type: ignore  # noqa: PGH003
+                predicate_name=rule_name,
+            )(fn)(*processed_args, **processed_kwargs)
 
         wrapper.__doc__ = description or fn.__doc__
 
@@ -431,6 +432,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
 
             return subscriptable_rule(
                 operator=self._operator,  # type: ignore  # noqa: PGH003
+                predicate_name=rule_name,
                 check_key_existence=(
                     check_key_existence
                     if check_key_existence is not None
