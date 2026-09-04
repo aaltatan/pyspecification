@@ -453,6 +453,10 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
 def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
     rule_name = name or fn.__name__
 
+    if rule_name == "<lambda>":
+        msg = "You must provide a name for the rule when using a lambda function"
+        raise ValueError(msg)
+
     if rule_name.lower() in RESERVED_WORDS:
         msg = f"Rule name '{rule_name}' is reserved"
         raise ValueError(msg)
