@@ -105,13 +105,15 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         self,
         *,
         name: str | None = None,
+        description: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
         hidden: bool = False,
     ) -> Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]:
         """A decorator for registering an object-based rule.
 
         Args:
-            name (str, optional): The name of the rule. Defaults to None.
+            name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
+            description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
             processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
 
@@ -121,7 +123,13 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         """  # noqa: D401, E501
 
         def decorator(fn: ObjectRuleDefinitionFn[T, R, P]) -> ObjectRuleFn[T, R, P]:
-            return self._register_rule(fn, name=name, processors=processors, hidden=hidden)
+            return self._register_rule(
+                fn,
+                name=name,
+                description=description,
+                processors=processors,
+                hidden=hidden,
+            )
 
         return decorator
 
@@ -131,6 +139,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         /,
         *,
         name: str | None = None,
+        description: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
         hidden: bool = False,
     ) -> ObjectRuleFn[T, R, P]:
@@ -138,7 +147,8 @@ class ObjectRulesRegistry[T, R: ReturnType]:
 
         Args:
             fn (ObjectRuleDefinitionFn[T, R, P]): The function to register.
-            name (str, optional): The name of the rule. Defaults to None.
+            name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
+            description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
             processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
 
@@ -146,13 +156,20 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             ObjectRuleFn[T, R, P]: The registered rule.
 
         """  # noqa: D401, E501
-        return self._register_rule(fn, name=name, processors=processors, hidden=hidden)
+        return self._register_rule(
+            fn,
+            name=name,
+            description=description,
+            processors=processors,
+            hidden=hidden,
+        )
 
     def _register_rule[**P](
         self,
         fn: ObjectRuleDefinitionFn[T, R, P],
         *,
         name: str | None,
+        description: str | None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]],
         hidden: bool,
     ) -> ObjectRuleFn[T, R, P]:
@@ -170,6 +187,8 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             return object_rule(operator=self._operator)(fn)(  # type: ignore  # noqa: PGH003
                 *processed_args, **processed_kwargs
             )
+
+        wrapper.__doc__ = description or fn.__doc__
 
         self._rules[rule_name] = wrapper
 
@@ -311,6 +330,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         self,
         *,
         name: str | None = None,
+        description: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
         hidden: bool = False,
         check_key_existence: bool | None = None,
@@ -319,7 +339,8 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         """A decorator for registering a subscriptable-based rule.
 
         Args:
-            name (str, optional): The name of the rule. Defaults to None.
+            name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
+            description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
             processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
@@ -336,10 +357,11 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             return self._register_rule(
                 fn,
                 name=name,
+                description=description,
                 processors=processors,
+                hidden=hidden,
                 check_key_existence=check_key_existence,
                 forbidden_keys=forbidden_keys,
-                hidden=hidden,
             )
 
         return decorator
@@ -350,6 +372,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         /,
         *,
         name: str | None = None,
+        description: str | None = None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
         hidden: bool = False,
         check_key_existence: bool | None = None,
@@ -359,7 +382,8 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
 
         Args:
             fn (SubscriptableRuleDefinitionFn[T, K, R, P]): The function to register.
-            name (str, optional): The name of the rule. Defaults to None.
+            name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
+            description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
             processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
@@ -372,10 +396,11 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         return self._register_rule(
             fn,
             name=name,
+            description=description,
             processors=processors,
+            hidden=hidden,
             check_key_existence=check_key_existence,
             forbidden_keys=forbidden_keys,
-            hidden=hidden,
         )
 
     def _register_rule[**P](
@@ -383,6 +408,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         fn: SubscriptableRuleDefinitionFn[T, K, R, P],
         *,
         name: str | None,
+        description: str | None,
         processors: tuple[ProcessFn, dict[str, ProcessFn]],
         hidden: bool,
         check_key_existence: bool | None,
@@ -412,6 +438,8 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
                     forbidden_keys if forbidden_keys is not None else self._forbidden_keys
                 ),
             )(fn)(key, *processed_args, **processed_kwargs)
+
+        wrapper.__doc__ = description or fn.__doc__
 
         self._rules[rule_name] = wrapper
 

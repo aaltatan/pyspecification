@@ -132,6 +132,33 @@ def test_raising_error_when_using_hidden_rule(
         obj_registry["some_rule"]
 
 
+def test_description_obj(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(description="This is overridden description")
+    def some_rule(_: User) -> bool:
+        """Do Some Work."""
+        return True
+
+    @obj_registry.rule()
+    def some_rule_2(_: User) -> bool:
+        """Do Some Work."""
+        return True
+
+    @obj_registry.rule()
+    def some_rule_3(_: User) -> bool: ...
+
+    @obj_registry.rule(description="This is overridden description 2")
+    def some_rule_4(_: User) -> bool:
+        """Do Some Work."""
+        return True
+
+    assert some_rule.__doc__ == "This is overridden description"
+    assert some_rule_2.__doc__ == "Do Some Work."
+    assert some_rule_3.__doc__ is None
+    assert some_rule_4.__doc__ == "This is overridden description 2"
+
+
 # -----------------------
 # dict tests
 # -----------------------
@@ -261,3 +288,28 @@ def test_raising_error_when_using_hidden_rule_2(
 
     with pytest.raises(RuleDoesNotExistError, match="Rule 'some_rule' does not exist"):
         sub_registry["some_rule"]
+
+
+def test_description(
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
+) -> None:
+    @sub_registry.rule(description="This is overridden description")
+    def some_rule(_: dict[str, Any], __: str, ___: str) -> bool:
+        """Do Some Work."""
+        return True
+
+    @sub_registry.rule()
+    def some_rule_2(_: dict[str, Any], __: str, ___: str) -> bool:
+        """Do Some Work."""
+        return True
+
+    @sub_registry.rule()
+    def some_rule_3(obj: dict[str, Any], key: str, value: str) -> bool: ...
+
+    @sub_registry.rule(description="This is overridden description 2")
+    def some_rule_4(obj: dict[str, Any], key: str, value: str) -> bool: ...
+
+    assert some_rule.__doc__ == "This is overridden description"
+    assert some_rule_2.__doc__ == "Do Some Work."
+    assert some_rule_3.__doc__ is None
+    assert some_rule_4.__doc__ == "This is overridden description 2"
