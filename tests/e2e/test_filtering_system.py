@@ -13,6 +13,7 @@ from pyspecification import (
     TooManyArgumentsError,
     UnexpectedKeywordArgumentError,
 )
+from pyspecification.exceptions import PositionalOnlyArgumentError
 
 from tests.models import CompilerGetter
 
@@ -94,6 +95,8 @@ def rules() -> SubscriptableRulesRegistry[dict[str, Any], str, bool]:
         return obj[key] >= value
 
     @rules.rule()
+    def string__startswith(obj: dict[str, Any], key: str, value: str, /) -> bool: ...
+    @rules.rule()
     def string__istartswith(obj: dict[str, Any], key: str, *, value: str) -> bool: ...
     @rules.rule()
     def string__icontains(obj: dict[str, Any], key: str, value: str) -> bool: ...
@@ -151,6 +154,25 @@ def test_filtering_system(
 @pytest.mark.parametrize(
     "filter_rule_data, exception_class",
     [
+        # def string__startswith(obj: dict[str, Any], key: str, value: str, /) -> bool:
+        ({"string__startswith": []}, MissingArgumentError),
+        ({"string__startswith": ["name"]}, MissingArgumentError),
+        ({"string__startswith": ["name", "a", "xxx"]}, TooManyArgumentsError),
+        ({"string__startswith": {}}, MissingArgumentError),
+        ({"string__startswith": {"key": "name"}}, MissingArgumentError),
+        ({"string__startswith": {"value", "ssss"}}, MissingArgumentError),
+        (
+            {"string__startswith": {"key": "name", "value_not_exists": "sss"}},
+            UnexpectedKeywordArgumentError,
+        ),
+        (
+            {"string__startswith": {"key": "name", "value": "a"}},
+            PositionalOnlyArgumentError,
+        ),
+        (
+            {"string__startswith": {"key": "name", "value": "a", "value_not_exists": "sss"}},
+            PositionalOnlyArgumentError,
+        ),
         # def string__istartswith(obj: dict[str, Any], key: str, *, value: str) -> bool:
         ({"string__istartswith": []}, MissingArgumentError),
         ({"string__istartswith": ["name"]}, MissingArgumentError),
