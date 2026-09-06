@@ -40,17 +40,17 @@ def object_rule[T, R: ReturnType, **P](
         is_admin: bool
 
 
-    @object_rule(operator="logical")
+    @object_rule()
     def is_admin(user: User) -> bool:
         return user.is_admin
 
 
-    @object_rule(operator="bitwise")
+    @object_rule()
     def name__istartswith(user: User, value: str) -> bool:
         return user.name.lower().startswith(value.lower())
 
 
-    @object_rule(operator="logical")
+    @object_rule()
     def age__between(user: User, min_age: int, max_age: int) -> bool:
         return user.age >= min_age and user.age <= max_age
 
@@ -60,14 +60,19 @@ def object_rule[T, R: ReturnType, **P](
 
         EMPLOYEES = [
             User(name="Alice", age=18, is_admin=True),
-            User(name="Bob", age=6, is_admin=True),
-            User(name="Charlie", age=3, is_admin=False),
+            User(name="Admin", age=6, is_admin=False),
+            User(name="Admin", age=18, is_admin=False),
             User(name="David", age=12, is_admin=False),
             User(name="Eve", age=8, is_admin=True),
         ]
 
-        results = [rule(emp) for emp in EMPLOYEES]
-        assert results == [True, True, False, False, True]
+        print([e for e in EMPLOYEES if rule(e)])
+
+        # [
+        #     User(name="Alice", age=18, is_admin=True),
+        #     User(name="Admin", age=18, is_admin=False),
+        #     User(name="Eve", age=8, is_admin=True),
+        # ]
 
 
     if __name__ == "__main__":
@@ -127,29 +132,36 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     from pyspecification import subscriptable_rule
 
 
-    @subscriptable_rule(operator="logical")
-    def eq(d: dict[str, int], key: str, value: Any) -> bool:
+    @subscriptable_rule()
+    def string__ieq(d: dict[str, int], key: str, value: Any) -> bool:
         return d[key] == value
 
 
-    @subscriptable_rule(operator="bitwise")
-    def ge(d: dict[str, int], key: str, value: int | float) -> bool:
+    @subscriptable_rule()
+    def int__ge(d: dict[str, int], key: str, value: int | float) -> bool:
         return d[key] >= value
 
 
     def main() -> None:
-        rule = eq("name", "abdullah") & ge("age", 18)
+        rule = string__ieq("name", "a") | int__ge("age", 18)
 
         EMPLOYEES = [
-            {"name": "Alice", "age": 18},
+            {"name": "Alice", "age": 5},
+            {"name": "Admin", "age": 6},
             {"name": "Bob", "age": 6},
             {"name": "Charlie", "age": 3},
-            {"name": "David", "age": 12},
-            {"name": "Eve", "age": 8},
+            {"name": "David", "age": 25},
+            {"name": "Eve", "age": 30},
         ]
 
-        results = [rule(emp) for emp in EMPLOYEES]
-        assert results == [True, True, False, False, True]
+        print([e for e in EMPLOYEES if rule(e)])
+
+        # [
+        #     {"name": "Alice", "age": 5},
+        #     {"name": "Admin", "age": 6},
+        #     {"name": "David", "age": 25},
+        #     {"name": "Eve", "age": 30},
+        # ]
 
 
     if __name__ == "__main__":

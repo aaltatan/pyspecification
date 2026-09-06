@@ -62,31 +62,29 @@ class PredicateCompiler[T, R: ReturnType]:
     from pyspecification import Predicate, PredicateCompiler, object_rule
 
 
-    @object_rule
+    @object_rule()
     def is_admin(user: User) -> bool:
         return user.is_admin
 
 
-    @object_rule
+    @object_rule()
     def name__istartswith(user: User, value: str) -> bool:
         return user.name.lower().startswith(value.lower())
 
 
-    @object_rule
+    @object_rule()
     def age__between(user: User, min_age: int, max_age: int) -> bool:
         return user.age >= min_age and user.age <= max_age
 
 
     def main() -> None:
-        rules = {
-            "is_admin": is_admin,
-            "name__istartswith": name__istartswith,
-            "age__between": age__between,
-        }
-
         compiler = PredicateCompiler(
-            rules,
-            lambda schema: Predicate(lambda _: schema["operator"] == "and"),
+            {
+                "is_admin": is_admin,
+                "name__istartswith": name__istartswith,
+                "age__between": age__between,
+            },
+            lambda schema: Predicate(lambda _: schema["operator"] == "and", operator="logical"),
         )
 
         rule_data = {
@@ -120,9 +118,9 @@ class PredicateCompiler[T, R: ReturnType]:
             ],
         }
 
-        predicate = compiler.compile(rule_data)
+        rule = compiler.compile(rule_data)
 
-        assert all(predicate(user) for user in users)
+        assert all(rule(user) for user in users)
 
 
     if __name__ == "__main__":

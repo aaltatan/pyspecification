@@ -12,24 +12,24 @@ def get_json_schema(rule: Callable[..., Any]) -> dict[str, Any]:
         rule (Callable): The rule to get the JSON schema for.
 
     Returns:
-        dict: The JSON schema for the rule.
+        dict[str, Any]: The JSON schema for the rule.
 
     Example:
     ```python
     from pyspecification import get_json_schema, object_rule
 
 
-    @object_rule
+    @object_rule()
     def is_admin(user: User) -> bool:
         return user.is_admin
 
 
-    @object_rule
+    @object_rule()
     def name__istartswith(user: User, value: str) -> bool:
         return user.name.lower().startswith(value.lower())
 
 
-    @object_rule
+    @object_rule()
     def age__between(user: User, min_age: int, max_age: int) -> bool:
         return user.age >= min_age and user.age <= max_age
 
