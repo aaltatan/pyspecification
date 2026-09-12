@@ -118,7 +118,6 @@ def compiler(
         (
             {
                 "operator": "all",
-                "inverse": False,
                 "expressions": [
                     {
                         "name": "string__iendswith",
@@ -139,7 +138,6 @@ def compiler(
         (
             {
                 "operator": "all",
-                "inverse": False,
                 "expressions": [
                     {
                         "name": "number__le",

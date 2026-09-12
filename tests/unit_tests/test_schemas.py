@@ -35,7 +35,6 @@ def test_predicate_schema(predicate_data: dict[str, Any]) -> None:
             (
                 {
                     "operator": "all",
-                    "inverse": False,
                     "expressions": [
                         {"name": "name__len_le", "args": [10], "kwargs": {}, "inverse": False},
                         {"name": "name__len_le", "args": [10], "kwargs": {}, "inverse": True},
@@ -49,7 +48,6 @@ def test_predicate_schema(predicate_data: dict[str, Any]) -> None:
                 },
                 {
                     "operator": "all",
-                    "inverse": False,
                     "expressions": [
                         {
                             "name": "name__len_le",
@@ -104,7 +102,6 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
         (
             {
                 "operator": "all",
-                "inverse": False,
                 "expressions": [
                     {"name": "name__len_le", "args": [10], "kwargs": {}, "inverse": False},
                     {
@@ -121,7 +118,6 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                     },
                     {
                         "operator": "all",
-                        "inverse": False,
                         "expressions": [
                             {"name": "age__gt", "args": [18], "kwargs": {}, "inverse": False},
                             {"name": "is_admin", "args": [True], "kwargs": {}, "inverse": False},
@@ -129,7 +125,6 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                     },
                     {
                         "operator": "any",
-                        "inverse": True,
                         "expressions": [
                             {"name": "age__gt", "args": [18], "kwargs": {}, "inverse": False},
                             {"name": "is_admin", "args": [True], "kwargs": {}, "inverse": False},
@@ -140,7 +135,6 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
             RuleSchema(
                 root=ExpressionsWrapperSchema(
                     operator="all",
-                    inverse=False,
                     expressions=[
                         PredicateSchema(name="name__len_le", args=[10], kwargs={}, inverse=False),
                         PredicateSchema(
@@ -154,7 +148,6 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                         ),
                         ExpressionsWrapperSchema(
                             operator="all",
-                            inverse=False,
                             expressions=[
                                 PredicateSchema(
                                     name="age__gt", args=[18], kwargs={}, inverse=False
@@ -166,7 +159,6 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                         ),
                         ExpressionsWrapperSchema(
                             operator="any",
-                            inverse=True,
                             expressions=[
                                 PredicateSchema(
                                     name="age__gt", args=[18], kwargs={}, inverse=False

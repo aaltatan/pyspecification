@@ -26,7 +26,6 @@ class ExpressionsWrapperSchema(BaseModel):
     """A schema for an expression."""
 
     operator: Literal["all", "any"]
-    inverse: bool
     expressions: list["ExpressionType"] = Field(min_length=1)
 
 

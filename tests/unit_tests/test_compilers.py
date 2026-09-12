@@ -63,7 +63,6 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
             [User(name="admin", age=18, is_admin=True)],
             {
                 "operator": "all",
-                "inverse": False,
                 "expressions": [
                     {
                         "name": "name__istartswith",
@@ -71,7 +70,12 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
                         "kwargs": {},
                         "inverse": False,
                     },
-                    {"name": "age__between", "args": [18, 30], "kwargs": {}, "inverse": False},
+                    {
+                        "name": "age__between",
+                        "args": [18, 30],
+                        "kwargs": {},
+                        "inverse": False,
+                    },
                 ],
             },
             name__istartswith("admin") & age__between(18, 30),
@@ -83,7 +87,6 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
             ],
             {
                 "operator": "any",
-                "inverse": False,
                 "expressions": [
                     {
                         "name": "is_admin",
@@ -93,7 +96,6 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
                     },
                     {
                         "operator": "all",
-                        "inverse": False,
                         "expressions": [
                             {
                                 "name": "name__istartswith",
@@ -119,25 +121,28 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
                 User(name="admin", age=20, is_admin=False),
             ],
             {
-                "operator": "any",
-                "inverse": True,
+                "operator": "all",
                 "expressions": [
-                    {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
                     {
-                        "operator": "all",
-                        "inverse": False,
+                        "name": "is_admin",
+                        "args": [],
+                        "kwargs": {},
+                        "inverse": True,
+                    },
+                    {
+                        "operator": "any",
                         "expressions": [
                             {
                                 "name": "name__istartswith",
                                 "args": ["admin"],
                                 "kwargs": {},
-                                "inverse": False,
+                                "inverse": True,
                             },
                             {
                                 "name": "age__between",
                                 "args": [18, 30],
                                 "kwargs": {},
-                                "inverse": False,
+                                "inverse": True,
                             },
                         ],
                     },
@@ -165,18 +170,30 @@ def test_compiler(
         {"name": "rule_not_exists", "args": [20], "kwargs": {}, "inverse": False},
         {
             "operator": "all",
-            "inverse": False,
             "expressions": [
-                {"name": "name__istartswith", "args": ["admin"], "kwargs": {}, "inverse": False},
-                {"name": "age__between", "args": [18, 30], "kwargs": {}, "inverse": False},
+                {
+                    "name": "name__istartswith",
+                    "args": ["admin"],
+                    "kwargs": {},
+                    "inverse": False,
+                },
+                {
+                    "name": "age__between",
+                    "args": [18, 30],
+                    "kwargs": {},
+                    "inverse": False,
+                },
                 {
                     "operator": "any",
-                    "inverse": False,
                     "expressions": [
-                        {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
+                        {
+                            "name": "is_admin",
+                            "args": [],
+                            "kwargs": {},
+                            "inverse": False,
+                        },
                         {
                             "operator": "all",
-                            "inverse": False,
                             "expressions": [
                                 {
                                     "name": "name__istartswith",
@@ -212,9 +229,22 @@ def test_compiler_with_invalid_rule_dict(compiler: PredicateCompiler) -> None:
     with pytest.raises(TypeError) as error:
         compiler.compile(
             {
-                "name__istartswith": "dasdads",
-                "rule_not_exists": [],  # type: ignore  # noqa: PGH003
-            },
+                "operator": "all",
+                "expressionsx": [
+                    {
+                        "name": "name__istartswith",
+                        "args": ["dasdads"],
+                        "kwargs": {},
+                        "inverse": False,
+                    },
+                    {
+                        "name": "rule_not_exists",
+                        "args": [],
+                        "kwargs": {},
+                        "inverse": False,
+                    },
+                ],
+            }  # type: ignore  # noqa: PGH003
         )
 
     message = str(error.value)
@@ -231,7 +261,6 @@ def test_compiler_reports_nested_invalid_expression_path(
         compiler.compile(
             {
                 "operator": "all",
-                "inverse": False,
                 "expressions": [
                     {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
                     {"unexpected": True, "another": False},

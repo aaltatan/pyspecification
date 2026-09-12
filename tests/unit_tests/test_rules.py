@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from pyspecification.rules import RuleKeyDoesNotExistError, object_rule, subscriptable_rule
+from pyspecification import Predicate, RuleKeyDoesNotExistError, object_rule, subscriptable_rule
 
 # -----------------------
 # obj rule
@@ -32,6 +32,32 @@ def age__between(user: User, min_age: int, max_age: int) -> bool:
 
 
 admin_rule_v1 = is_admin() | (name__istartswith("admin") & age__between(18, 30))
+
+
+@pytest.mark.parametrize(
+    "rule1, rule2",
+    [
+        (
+            is_admin() | name__istartswith("admin"),
+            ~(~is_admin() and ~name__istartswith("admin")),
+        ),
+        (
+            is_admin() & name__istartswith("admin"),
+            ~(~is_admin() | ~name__istartswith("admin")),
+        ),
+        (
+            ~(is_admin() | name__istartswith("admin")),
+            ~is_admin() & ~name__istartswith("admin"),
+        ),
+        (
+            ~(is_admin() & name__istartswith("admin")),
+            ~is_admin() | ~name__istartswith("admin"),
+        ),
+    ],
+)
+def test_rule_and_rule(rule1: Predicate[User, bool], rule2: Predicate[User, bool]) -> None:
+    user = User(name="admin", age=18, is_admin=True)
+    assert rule1(user) == rule2(user)
 
 
 @pytest.mark.parametrize(

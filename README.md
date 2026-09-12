@@ -321,7 +321,9 @@ filter_rule_data = {
     ],
 }
 
-predicate = compiler.compile(RuleSchema(**filter_rule_data).model_dump())
+predicate = compiler.compile(RuleSchema(**filter_rule_data).model_dump()) 
+# is_admin() | age__ge(18)
+# User.is_admin | User.age >= 18
 
 with SessionLocal() as session:
     users = session.query(User).filter(predicate(User)).all()
@@ -447,7 +449,7 @@ rule_data = {
                     "inverse": False,
                 },
                 {
-                    "name": "rule_not_exists", 
+                    "name": "age__between", 
                     "args": [18, 30], 
                     "kwargs": {}, 
                     "inverse": False,
@@ -458,6 +460,8 @@ rule_data = {
 }
 
 predicate = compiler.compile(RuleSchema(**rule_data).model_dump())
+# is_admin() | (name__istartswith("admin") & age__between(18, 30))
+
 print(predicate(User("admin", 25, True)))  # True
 ```
 
@@ -525,6 +529,8 @@ import json
 rule_json = '{"name": "age__between", "args": [18, 30], "kwargs": {}, "inverse": false}'
 rule_data = json.loads(rule_json)
 predicate = compiler.compile(rule_data)
+
+print(repr(predicate))  # Predicate(age__between)
 ```
 
 ### Expression wrapper schema
@@ -548,9 +554,8 @@ Use a wrapper to combine predicates. A wrapper has an `operator`, an
             "kwargs": {},
             "inverse": false
         }
-    ],
-    "inverse": false
-}
+    ]
+} // is_admin() & age__between(18, 30)
 ```
 
 `operator` must be either `"all"` or `"any"`. Expressions can be nested to
@@ -581,35 +586,10 @@ represent more complex logic:
                     "kwargs": {"min_age": 18, "max_age": 30},
                     "inverse": false
                 }
-            ],
-            "inverse": false
+            ]
         }
-    ],
-    "inverse": false
-}
-```
-
-You can also invert a complete wrapper:
-
-```json
-{
-    "operator": "any",
-    "expressions": [
-        {
-            "name": "is_admin",
-            "args": [],
-            "kwargs": {},
-            "inverse": false
-        },
-        {
-            "name": "age__between",
-            "args": [18, 30],
-            "kwargs": {},
-            "inverse": false
-        }
-    ],
-    "inverse": true
-}
+    ]
+} // is_admin() | (name__istartswith("admin") & age__between(min_age=18, max_age=30))
 ```
 
 The compiler raises `RuleDoesNotExistError` when a predicate name is not in the
@@ -798,6 +778,8 @@ filter_rule = {
 }
 
 query_predicate = compiler.compile(RuleSchema(**filter_rule).model_dump())
+# is_admin() | age__ge(18)
+# User.is_admin | User.age >= 18
 ```
 
 This makes it easy to expose admin filters, user search rules, and role-based queries without manually stitching SQL conditions together.
@@ -976,6 +958,7 @@ rule_definition = {
 schema = RuleSchema(**rule_definition)
 compiler = PredicateCompiler(registry.rules, lambda spec: Predicate(lambda _: True, operator="logical"))
 predicate = compiler.compile(schema.model_dump())
+# is_admin() | (name__istartswith("admin") & age__between(18, 30))
 
 users = [
     User("Abdullah", 18, True),

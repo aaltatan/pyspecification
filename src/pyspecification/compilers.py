@@ -12,7 +12,7 @@ type ExpressionDict = ExpressionWrapperDict | PredicateDict
 
 
 PREDICATE_DICT_KEYS = {"name", "args", "kwargs", "inverse"}
-EXPRESSION_WRAPPER_DICT_KEYS = {"operator", "expressions", "inverse"}
+EXPRESSION_WRAPPER_DICT_KEYS = {"operator", "expressions"}
 
 
 class PredicateDict(TypedDict):
@@ -29,7 +29,6 @@ class ExpressionWrapperDict(TypedDict):
 
     operator: Literal["all", "any"]
     expressions: list["ExpressionWrapperDict | PredicateDict"]
-    inverse: bool
 
 
 def is_predicate_dict(d: Any) -> TypeGuard[PredicateDict]:
@@ -89,7 +88,6 @@ class PredicateCompiler[T, R: ReturnType]:
 
         rule_data = {
             "operator": "any",
-            "inverse": False,
             "expressions": [
                 {
                     "name": "is_admin",
@@ -99,7 +97,6 @@ class PredicateCompiler[T, R: ReturnType]:
                 },
                 {
                     "operator": "all",
-                    "inverse": False,
                     "expressions": [
                         {
                             "name": "name__istartswith",
@@ -176,9 +173,6 @@ class PredicateCompiler[T, R: ReturnType]:
                 predicate &= compiled_predicate
             else:
                 predicate |= compiled_predicate
-
-        if wrapper["inverse"]:
-            predicate = ~predicate
 
         return predicate
 

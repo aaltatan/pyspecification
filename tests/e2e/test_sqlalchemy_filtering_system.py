@@ -134,7 +134,6 @@ def test_query(session: Session) -> None:
         (
             {
                 "operator": "all",
-                "inverse": False,
                 "expressions": [
                     {"name": "age__ge", "args": [18], "kwargs": {}, "inverse": False},
                     {"name": "age__le", "args": [30], "kwargs": {}, "inverse": False},
@@ -146,7 +145,6 @@ def test_query(session: Session) -> None:
         (
             {
                 "operator": "any",
-                "inverse": False,
                 "expressions": [
                     {"name": "is_admin", "args": [], "kwargs": {}, "inverse": True},
                     {"name": "age__ge", "args": [18], "kwargs": {}, "inverse": False},
