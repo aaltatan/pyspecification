@@ -1,6 +1,6 @@
 [project]
 name = "pyspecification"
-version = "1.0.0"
+version = "2.0.0"
 description = "A lightweight, typed Python library for composing business rules as reusable, executable predicates."
 readme = "README.md"
 authors = [{ name = "aaltatan", email = "a.altatan@gmail.com" }]
