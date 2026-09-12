@@ -7,7 +7,6 @@ from pyspecification import (
     ObjectRulesRegistry,
     Predicate,
     PredicateCompiler,
-    RuleSchema,
     TooManyArgumentsError,
     UnexpectedKeywordArgumentError,
 )
@@ -161,9 +160,7 @@ def test_filtering_system(
     expected_names: tuple[str, ...],
 ) -> None:
     # Arrange
-    filter_expression = sqlalchemy_compiler.compile(
-        RuleSchema(**filter_rule_data).model_dump(),  # type: ignore  # noqa: PGH003
-    )
+    filter_expression = sqlalchemy_compiler.compile(filter_rule_data)  # type: ignore  # noqa: PGH003
     filtered_data = session.query(User).filter(filter_expression(User)).all()
 
     # Act & Assert
@@ -240,7 +237,5 @@ def test_filtering_system_with_invalid_inputs(
     sqlalchemy_compiler: PredicateCompiler[type[User], ColumnElement[bool]],
 ) -> None:
     with pytest.raises(exception_class):
-        predicate = sqlalchemy_compiler.compile(
-            RuleSchema(**filter_rule_data).model_dump(),  # type: ignore  # noqa: PGH003
-        )
+        predicate = sqlalchemy_compiler.compile(filter_rule_data)  # type: ignore  # noqa: PGH003
         predicate(User)

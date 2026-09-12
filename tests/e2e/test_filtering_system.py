@@ -8,7 +8,6 @@ from pyspecification import (
     PredicateCompiler,
     ProcessArgumentError,
     RuleDoesNotExistError,
-    RuleSchema,
     SubscriptableRulesRegistry,
     TooManyArgumentsError,
     UnexpectedKeywordArgumentError,
@@ -178,9 +177,7 @@ def test_filtering_system(
     filter_rule_data: dict[str, Any],
     expected_names: tuple[str, ...],
 ) -> None:
-    predicate = compiler.compile(
-        RuleSchema(**filter_rule_data).model_dump(),  # type: ignore  # noqa: PGH003
-    )
+    predicate = compiler.compile(filter_rule_data)  # type: ignore  # noqa: PGH003
     filtered_data = [item for item in data if predicate(item)]
 
     assert all(item["name"] in expected_names for item in filtered_data)
@@ -363,9 +360,7 @@ def test_filtering_system_with_invalid_inputs(
     compiler: PredicateCompiler[dict[str, Any], bool],
 ) -> None:
     with pytest.raises(exception_class):
-        predicate = compiler.compile(
-            RuleSchema(**filter_rule_data).model_dump(),  # type: ignore  # noqa: PGH003
-        )
+        predicate = compiler.compile(filter_rule_data)  # type: ignore  # noqa: PGH003
         predicate({"name": "Abdullah", "age": 18, "is_admin": True})
 
 
@@ -374,14 +369,12 @@ def test_filtering_system_with_invalid_rule_name(
 ) -> None:
     with pytest.raises(RuleDoesNotExistError, match="Rule 'invalid_rule' does not exist"):
         compiler.compile(
-            RuleSchema(
-                **{  # noqa: PIE804
-                    "name": "invalid_rule",
-                    "args": ["birthdate", "06-01-2001"],
-                    "kwargs": {},
-                    "inverse": False,
-                }
-            ).model_dump()  # type: ignore  # noqa: PGH003
+            {
+                "name": "invalid_rule",
+                "args": ["birthdate", "06-01-2001"],
+                "kwargs": {},
+                "inverse": False,
+            }
         )
 
 
@@ -390,14 +383,12 @@ def test_filtering_system_with_invalid_datetime_format_arg(
 ) -> None:
     with pytest.raises(ProcessArgumentError, match="Argument '06-01-2001' failed to process"):
         compiler.compile(
-            RuleSchema(
-                **{  # noqa: PIE804
-                    "name": "datetime__gt",
-                    "args": ["birthdate", "06-01-2001"],
-                    "kwargs": {},
-                    "inverse": False,
-                }
-            ).model_dump()  # type: ignore  # noqa: PGH003
+            {
+                "name": "datetime__gt",
+                "args": ["birthdate", "06-01-2001"],
+                "kwargs": {},
+                "inverse": False,
+            }
         )
 
 
@@ -409,14 +400,12 @@ def test_filtering_system_with_invalid_datetime_format_kwarg(
         match="Keyword argument 'value' with value '06-01-2001' failed to process",
     ):
         compiler.compile(
-            RuleSchema(
-                **{  # noqa: PIE804
-                    "name": "datetime__gt",
-                    "inverse": False,
-                    "args": [],
-                    "kwargs": {"key": "birthdate", "value": "06-01-2001"},
-                }
-            ).model_dump()  # type: ignore  # noqa: PGH003
+            {
+                "name": "datetime__gt",
+                "inverse": False,
+                "args": [],
+                "kwargs": {"key": "birthdate", "value": "06-01-2001"},
+            }
         )
 
 
@@ -425,12 +414,10 @@ def test_filtering_system_without_processing_datetime(
 ) -> None:
     with pytest.raises(TypeError):
         compiler.compile(
-            RuleSchema(
-                **{  # noqa: PIE804
-                    "name": "datetime__ge",
-                    "args": ["birthdate", "2001-06-01"],
-                    "kwargs": {},
-                    "inverse": False,
-                }
-            ).model_dump()  # type: ignore  # noqa: PGH003
+            {
+                "name": "datetime__ge",
+                "args": ["birthdate", "2001-06-01"],
+                "kwargs": {},
+                "inverse": False,
+            }
         )({"birthdate": datetime(2005, 1, 1)})

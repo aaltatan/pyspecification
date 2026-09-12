@@ -2,13 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from pyspecification import (
-    Predicate,
-    PredicateCompiler,
-    RuleDoesNotExistError,
-    RuleSchema,
-    object_rule,
-)
+from pyspecification import Predicate, PredicateCompiler, RuleDoesNotExistError, object_rule
 
 from tests.models import CompilerGetter
 
@@ -158,9 +152,7 @@ def test_compiler(
     predicate: Predicate[Any, Any],
     compiler: PredicateCompiler[User, bool],
 ) -> None:
-    compiled_predicate = compiler.compile(
-        RuleSchema(**rule_dict).model_dump(),  # type: ignore  # noqa: PGH003
-    )
+    compiled_predicate = compiler.compile(rule_dict)  # type: ignore  # noqa: PGH003
     assert all(compiled_predicate(user) for user in users) == all(predicate(user) for user in users)
 
 
@@ -220,9 +212,7 @@ def test_compiler_with_invalid_rule_name(
     rule_dict: dict[str, Any],
 ) -> None:
     with pytest.raises(RuleDoesNotExistError, match="Rule 'rule_not_exists' does not exist"):
-        compiler.compile(
-            RuleSchema(**rule_dict).model_dump(),  # type: ignore  # noqa: PGH003
-        )
+        compiler.compile(rule_dict)  # type: ignore  # noqa: PGH003
 
 
 def test_compiler_with_invalid_rule_dict(compiler: PredicateCompiler) -> None:
