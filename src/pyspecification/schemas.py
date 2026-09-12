@@ -8,8 +8,6 @@ from .validators import validate_python_vars_fn_naming_convention
 class PredicateSchema(BaseModel):
     """A schema for a predicate."""
 
-    type: Annotated[Literal["predicate"], Field(exclude=True)] = "predicate"
-
     name: Annotated[str, AfterValidator(validate_python_vars_fn_naming_convention)]
     inverse: bool
     args: list[Any]
@@ -26,8 +24,6 @@ class PredicateSchema(BaseModel):
 
 class ExpressionsWrapperSchema(BaseModel):
     """A schema for an expression."""
-
-    type: Annotated[Literal["wrapper"], Field(exclude=True)] = "wrapper"
 
     operator: Literal["all", "any"]
     inverse: bool
