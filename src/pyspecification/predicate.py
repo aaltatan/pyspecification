@@ -59,6 +59,8 @@ class Predicate[T, R: ReturnType]:
         assert rule(User(name="Abdullah", age=16, is_admin=True))
         assert rule(User(name="admin", age=20, is_admin=False))
 
+        assert repr(rule) == "Predicate(is_admin OR (name__istartswith AND age__between))"
+
 
     if __name__ == "__main__":
         main()

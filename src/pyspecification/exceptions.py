@@ -59,5 +59,16 @@ def is_too_many_arguments_exception(e: TypeError) -> bool:
     return re.search(r"takes \d+ positional arguments? but \d+ were given", e.args[0]) is not None
 
 
+class PositionalOnlyArgumentError(ArgumentError):
+    """Exception raised when positional-only argument is passed as keyword argument."""
+
+
+def is_positional_only_argument_exception(e: TypeError) -> bool:
+    return (
+        re.search(r"got some positional-only arguments passed as keyword arguments", e.args[0])
+        is not None
+    )
+
+
 class ProcessArgumentError(ArgumentError):
     """Exception raised when a process argument fails in registry class."""

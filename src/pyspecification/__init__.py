@@ -8,6 +8,7 @@ from .compilers import ExpressionWrapperDict, PredicateCompiler, PredicateDict
 from .exceptions import (
     ArgumentError,
     MissingArgumentError,
+    PositionalOnlyArgumentError,
     ProcessArgumentError,
     RuleAlreadyRegisteredError,
     RuleDoesNotExistError,
@@ -27,6 +28,7 @@ __all__ = [
     "MissingArgumentError",
     "ObjectRulesRegistry",
     "OperatorType",
+    "PositionalOnlyArgumentError",
     "Predicate",
     "PredicateCompiler",
     "PredicateDict",

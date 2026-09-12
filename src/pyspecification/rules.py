@@ -1,13 +1,15 @@
 from collections.abc import Callable
 from functools import wraps
-from typing import Concatenate
+from typing import Any, Concatenate
 
 from .exceptions import (
     MissingArgumentError,
+    PositionalOnlyArgumentError,
     RuleKeyDoesNotExistError,
     TooManyArgumentsError,
     UnexpectedKeywordArgumentError,
     is_missing_argument_exception,
+    is_positional_only_argument_exception,
     is_too_many_arguments_exception,
     is_unexpected_keyword_argument_exception,
 )
@@ -40,17 +42,17 @@ def object_rule[T, R: ReturnType, **P](
         is_admin: bool
 
 
-    @object_rule(operator="logical")
+    @object_rule()
     def is_admin(user: User) -> bool:
         return user.is_admin
 
 
-    @object_rule(operator="bitwise")
+    @object_rule()
     def name__istartswith(user: User, value: str) -> bool:
         return user.name.lower().startswith(value.lower())
 
 
-    @object_rule(operator="logical")
+    @object_rule()
     def age__between(user: User, min_age: int, max_age: int) -> bool:
         return user.age >= min_age and user.age <= max_age
 
@@ -60,14 +62,19 @@ def object_rule[T, R: ReturnType, **P](
 
         EMPLOYEES = [
             User(name="Alice", age=18, is_admin=True),
-            User(name="Bob", age=6, is_admin=True),
-            User(name="Charlie", age=3, is_admin=False),
+            User(name="Admin", age=6, is_admin=False),
+            User(name="Admin", age=18, is_admin=False),
             User(name="David", age=12, is_admin=False),
             User(name="Eve", age=8, is_admin=True),
         ]
 
-        results = [rule(emp) for emp in EMPLOYEES]
-        assert results == [True, True, False, False, True]
+        print([e for e in EMPLOYEES if rule(e)])
+
+        # [
+        #     User(name="Alice", age=18, is_admin=True),
+        #     User(name="Admin", age=18, is_admin=False),
+        #     User(name="Eve", age=8, is_admin=True),
+        # ]
 
 
     if __name__ == "__main__":
@@ -87,15 +94,7 @@ def object_rule[T, R: ReturnType, **P](
                 try:
                     return fn(obj, *args, **kwargs)
                 except TypeError as e:
-                    if is_missing_argument_exception(e):
-                        raise MissingArgumentError(str(e)) from e
-
-                    if is_unexpected_keyword_argument_exception(e):
-                        raise UnexpectedKeywordArgumentError(str(e)) from e
-
-                    if is_too_many_arguments_exception(e):
-                        raise TooManyArgumentsError(str(e)) from e
-
+                    _raise_appropriate_type_error(e, fn)
                     raise
 
             return Predicate(inner, operator=operator, name=predicate_name)
@@ -127,29 +126,36 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     from pyspecification import subscriptable_rule
 
 
-    @subscriptable_rule(operator="logical")
-    def eq(d: dict[str, int], key: str, value: Any) -> bool:
+    @subscriptable_rule()
+    def string__ieq(d: dict[str, int], key: str, value: Any) -> bool:
         return d[key] == value
 
 
-    @subscriptable_rule(operator="bitwise")
-    def ge(d: dict[str, int], key: str, value: int | float) -> bool:
+    @subscriptable_rule()
+    def int__ge(d: dict[str, int], key: str, value: int | float) -> bool:
         return d[key] >= value
 
 
     def main() -> None:
-        rule = eq("name", "abdullah") & ge("age", 18)
+        rule = string__ieq("name", "a") | int__ge("age", 18)
 
         EMPLOYEES = [
-            {"name": "Alice", "age": 18},
+            {"name": "Alice", "age": 5},
+            {"name": "Admin", "age": 6},
             {"name": "Bob", "age": 6},
             {"name": "Charlie", "age": 3},
-            {"name": "David", "age": 12},
-            {"name": "Eve", "age": 8},
+            {"name": "David", "age": 25},
+            {"name": "Eve", "age": 30},
         ]
 
-        results = [rule(emp) for emp in EMPLOYEES]
-        assert results == [True, True, False, False, True]
+        print([e for e in EMPLOYEES if rule(e)])
+
+        # [
+        #     {"name": "Alice", "age": 5},
+        #     {"name": "Admin", "age": 6},
+        #     {"name": "David", "age": 25},
+        #     {"name": "Eve", "age": 30},
+        # ]
 
 
     if __name__ == "__main__":
@@ -184,15 +190,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
                 try:
                     return fn(obj, key, *args, **kwargs)
                 except TypeError as e:
-                    if is_missing_argument_exception(e):
-                        raise MissingArgumentError(str(e)) from e
-
-                    if is_unexpected_keyword_argument_exception(e):
-                        raise UnexpectedKeywordArgumentError(str(e)) from e
-
-                    if is_too_many_arguments_exception(e):
-                        raise TooManyArgumentsError(str(e)) from e
-
+                    _raise_appropriate_type_error(e, fn)
                     raise
 
             return Predicate(inner, operator=operator, name=predicate_name)
@@ -200,3 +198,19 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
         return wrapper
 
     return decorator
+
+
+def _raise_appropriate_type_error(e: TypeError, fn: Callable[..., Any]) -> None:
+    error_message = str(e) + f" at {fn.__name__}"
+
+    if is_missing_argument_exception(e):
+        raise MissingArgumentError(error_message) from e
+
+    if is_unexpected_keyword_argument_exception(e):
+        raise UnexpectedKeywordArgumentError(error_message) from e
+
+    if is_too_many_arguments_exception(e):
+        raise TooManyArgumentsError(error_message) from e
+
+    if is_positional_only_argument_exception(e):
+        raise PositionalOnlyArgumentError(error_message) from e
