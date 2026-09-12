@@ -131,5 +131,7 @@ ExpressionType = Annotated[
 ]
 
 
-class RuleSchema(RootModel[ExpressionType]):
+class RuleSchema(RootModel):
     """A schema for a rule."""
+
+    root: ExpressionType

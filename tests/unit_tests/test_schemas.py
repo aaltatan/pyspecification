@@ -53,7 +53,7 @@ from pyspecification.schemas import (
 def test_predicate_schema(
     simple_predicate_data: dict[str, Any], predicate_data: dict[str, Any]
 ) -> None:
-    simple_predicate = SimplePredicateSchema(simple_predicate_data)
+    simple_predicate = SimplePredicateSchema(root=simple_predicate_data)
     predicate = PredicateSchema(**predicate_data)
 
     assert simple_predicate.name == predicate.name == predicate_data["name"]
@@ -107,12 +107,12 @@ def test_expression_schema_serialization(predicate: dict[str, Any], dumped: dict
 
 
 def test_simple_predicate() -> None:
-    assert SimplePredicateSchema({"name": "is_true"}).type == "simple"
+    assert SimplePredicateSchema(root={"name": "is_true"}).type == "simple"
 
 
 def test_error_when_simple_predicate_has_multiple_keys() -> None:
     with pytest.raises(ValueError):
-        SimplePredicateSchema({"is_admin": True, "name__startswith": "admin"})
+        SimplePredicateSchema(root={"is_admin": True, "name__startswith": "admin"})
 
 
 @pytest.mark.parametrize(
@@ -155,15 +155,15 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                 ]
             },
             RuleSchema(
-                ExpressionsWrapperSchema(
+                root=ExpressionsWrapperSchema(
                     expressions=[
-                        SimplePredicateSchema({"name__len_le": 10}),
+                        SimplePredicateSchema(root={"name__len_le": 10}),
                         PredicateSchema(name="name__contains", args=["Abdullah"]),
                         PredicateSchema(name="name__startswith", kwargs={"value": "Abdullah"}),
                         ExpressionsWrapperSchema(
                             expressions=[
-                                SimplePredicateSchema({"age__gt": 18}),
-                                SimplePredicateSchema({"is_admin": True}),
+                                SimplePredicateSchema(root={"age__gt": 18}),
+                                SimplePredicateSchema(root={"is_admin": True}),
                             ]
                         ),
                         ExpressionsWrapperSchema(
