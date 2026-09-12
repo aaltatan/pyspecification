@@ -18,7 +18,7 @@ from .validators import validate_python_vars_fn_naming_convention
 class SimplePredicateSchema(RootModel[dict[str, Any]]):
     """A schema for a simple predicate."""
 
-    @computed_field(exclude_if=lambda _: True)
+    @computed_field()
     @property
     def type(self) -> Literal["simple"]:
         return "simple"

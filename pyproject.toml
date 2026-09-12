@@ -5,7 +5,7 @@ description = "A lightweight, typed Python library for composing business rules 
 readme = "README.md"
 authors = [{ name = "aaltatan", email = "a.altatan@gmail.com" }]
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.13.4"]
+dependencies = ["pydantic==2.5.3"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
