@@ -16,11 +16,10 @@ from .exceptions import (
     TooManyArgumentsError,
     UnexpectedKeywordArgumentError,
 )
-from .json_schema import get_json_schema
+from .json_schema import get_rule_json_schema
 from .predicate import OperatorType, Predicate
 from .registry import ObjectRulesRegistry, SubscriptableRulesRegistry
 from .rules import object_rule, subscriptable_rule
-from .schemas import RuleSchema
 
 __all__ = [
     "ArgumentError",
@@ -36,11 +35,10 @@ __all__ = [
     "RuleAlreadyRegisteredError",
     "RuleDoesNotExistError",
     "RuleKeyDoesNotExistError",
-    "RuleSchema",
     "SubscriptableRulesRegistry",
     "TooManyArgumentsError",
     "UnexpectedKeywordArgumentError",
-    "get_json_schema",
+    "get_rule_json_schema",
     "object_rule",
     "subscriptable_rule",
 ]

@@ -10,7 +10,7 @@ This project was inspired by the work and ideas shared by [ArjanCodes](https://g
 - predicates compose with `&`, `|`, and `~`
 - registry-based registration keeps rules organized
 - structured rule definitions can be compiled from dictionaries or JSON-like payloads
-- generated schemas make rule metadata portable and machine-readable
+- structured rule definitions make rule metadata portable and machine-readable
 
 It is especially useful for filtering, validation, authorization checks, and declarative rule engines without introducing a heavy framework.
 
@@ -53,7 +53,6 @@ This keeps your logic:
 - Registry pattern for rule registration and lookup
 - Custom argument processors for coercion and normalization
 - `PredicateCompiler` for compiling structured rule dictionaries into executable predicates
-- `RuleSchema` validation for declarative rule payloads
 - JSON schema generation for rule arguments and return types
 - Support for both logical and bitwise operator modes
 - Hidden rules and custom naming for internal/private rule registration
@@ -236,7 +235,7 @@ One of the strongest real-world use cases is turning rule definitions into SQLAl
 ```python
 from typing import Any
 
-from pyspecification import ObjectRulesRegistry, Predicate, PredicateCompiler, RuleSchema
+from pyspecification import ObjectRulesRegistry, Predicate, PredicateCompiler
 from sqlalchemy import ColumnElement, and_, create_engine, or_
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
@@ -321,7 +320,7 @@ filter_rule_data = {
     ],
 }
 
-predicate = compiler.compile(RuleSchema(**filter_rule_data).model_dump()) 
+predicate = compiler.compile(filter_rule_data)
 # is_admin() | age__ge(18)
 # User.is_admin | User.age >= 18
 
@@ -394,7 +393,7 @@ If conversion fails, the library raises `ProcessArgumentError`.
 ```python
 from dataclasses import dataclass
 
-from pyspecification import Predicate, PredicateCompiler, RuleSchema, object_rule
+from pyspecification import Predicate, PredicateCompiler, object_rule
 
 
 @dataclass
@@ -459,69 +458,16 @@ rule_data = {
     ],
 }
 
-predicate = compiler.compile(RuleSchema(**rule_data).model_dump())
+predicate = compiler.compile(rule_data)
 # is_admin() | (name__istartswith("admin") & age__between(18, 30))
 
 print(predicate(User("admin", 25, True)))  # True
 ```
 
-### Predicate schema
-
-`PredicateCompiler.compile()` consumes the normalized dictionary produced by
-`RuleSchema(...).model_dump()`. A predicate schema always has four keys:
-
-```json
-{
-    "name": "<rule_name>",
-    "args": [],
-    "kwargs": {},
-    "inverse": false
-}
-```
-
-The `name` must be present in the dictionary of rules passed to the compiler.
-Use `args` for positional arguments and `kwargs` for keyword arguments. These
-examples assume the rules from the previous section:
-
-```json
-{
-    "name": "is_admin",
-    "args": [],
-    "kwargs": {},
-    "inverse": false
-}
-```
-
-```json
-{
-    "name": "name__istartswith",
-    "args": ["admin"],
-    "kwargs": {},
-    "inverse": false
-}
-```
-
-```json
-{
-    "name": "age__between",
-    "args": [],
-    "kwargs": {"min_age": 18, "max_age": 30},
-    "inverse": false
-}
-```
-
-Set `inverse` to `true` to negate one predicate:
-
-```json
-{
-    "name": "is_admin",
-    "args": [],
-    "kwargs": {},
-    "inverse": true
-}
-```
-
-The normalized schema is convenient when rule definitions arrive as JSON:
+`PredicateCompiler.compile()` consumes a normalized dictionary. The `name`
+must be present in the dictionary of rules passed to the compiler. Use `args`
+for positional arguments, `kwargs` for keyword arguments, and `inverse` to
+negate one predicate:
 
 ```python
 import json
@@ -533,10 +479,8 @@ predicate = compiler.compile(rule_data)
 print(repr(predicate))  # Predicate(age__between)
 ```
 
-### Expression wrapper schema
-
-Use a wrapper to combine predicates. A wrapper has an `operator`, an
-`expressions` list, and an `inverse` flag:
+Use a wrapper to combine predicates. A wrapper has an `operator` and an
+`expressions` list:
 
 ```json
 {
@@ -594,55 +538,19 @@ represent more complex logic:
 
 The compiler raises `RuleDoesNotExistError` when a predicate name is not in the
 compiler's rule mapping. If the dictionary passed directly to `compile()` does
-not match a predicate or wrapper schema, it raises `TypeError`. The error
-includes the location of the invalid expression, the expected schemas, and the
-received value. Validate external payloads with `RuleSchema` before compilation.
+not match a predicate or wrapper shape, it raises `TypeError`.
 
 ---
-
-## Rule schema validation
-
-`RuleSchema` validates declarative rule payloads.
-
-```python
-from pyspecification import RuleSchema
-
-rule_data = {
-    "operator": "all",
-    "expressions": [
-        {
-            "name": "name__startswith",
-            "args": ["admin"],
-            "kwargs": {},
-            "inverse": False,
-        },
-        {
-            "name": "age__gt",
-            "args": [18],
-            "kwargs": {},
-            "inverse": False,
-        }
-    ],
-}
-
-schema = RuleSchema(**rule_data)
-print(schema.model_dump())
-```
-
-This is useful when you want to validate incoming rule definitions before compile-time execution.
-
-You can also use `RuleSchema` to represent nested predicate trees as typed, portable data.
-
 ---
 
 ## JSON schema generation
 
-`get_json_schema` inspects a rule function and returns JSON-schema-like metadata for parameters and return value.
+`get_rule_json_schema` inspects a rule function and returns JSON-schema-like metadata for parameters and return value.
 
 ```python
 from dataclasses import dataclass
 
-from pyspecification import get_json_schema, object_rule
+from pyspecification import get_rule_json_schema, object_rule
 
 
 @dataclass
@@ -657,7 +565,7 @@ def name__istartswith(user: User, value: str) -> bool:
     return user.name.lower().startswith(value.lower())
 
 
-print(get_json_schema(name__istartswith))
+print(get_rule_json_schema(name__istartswith))
 # {
 #   "value": {"type": "string"},
 #   "return": {"type": "boolean"},
@@ -720,7 +628,7 @@ filtered = [user for user in users if predicate(user)]
 This is one of the most useful real-world patterns for the package. You can define a reusable rule set and compile it into SQLAlchemy boolean expressions for database queries.
 
 ```python
-from pyspecification import ObjectRulesRegistry, Predicate, PredicateCompiler, RuleSchema
+from pyspecification import ObjectRulesRegistry, Predicate, PredicateCompiler
 from sqlalchemy import ColumnElement, and_, or_
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -777,7 +685,7 @@ filter_rule = {
     ],
 }
 
-query_predicate = compiler.compile(RuleSchema(**filter_rule).model_dump())
+query_predicate = compiler.compile(filter_rule)
 # is_admin() | age__ge(18)
 # User.is_admin | User.age >= 18
 ```
@@ -796,7 +704,7 @@ This allows readable authorization checks without large condition trees.
 
 ### 3. Dynamic rule engines
 
-The compiler and schema APIs make it easy to store or receive rules as structured data.
+The compiler makes it easy to store or receive rules as structured data.
 
 Examples:
 
@@ -837,10 +745,6 @@ Rules should do one thing and avoid hidden side effects.
 
 If your project has many rules, registries provide structure and reduce duplication.
 
-### Validate schema before compile
-
-If you load rules from external sources, validate them via `RuleSchema` before compiling.
-
 ---
 
 ## Exceptions
@@ -871,7 +775,7 @@ rule. Its specialized exceptions describe the problem:
 `RuleDoesNotExistError` includes the missing name and the available rule names,
 which is useful when rules are dynamically loaded. Malformed normalized
 compiler payloads raise `TypeError`; its message identifies the JSON-like path
-of the invalid expression and shows the expected schemas.
+of the invalid expression and shows the expected shapes.
 
 ---
 
@@ -881,14 +785,13 @@ This project includes runnable examples under the `scripts/` directory:
 
 - `scripts/rules_example.py` — basic object-based rule composition
 - `scripts/reg_example.py` — registry usage and compiled rule predicate patterns
-- `scripts/json_schema_example.py` — JSON schema generation examples
 
 The test suite under `tests/` also demonstrates behavior for:
 
 - registry registration
 - predicate composition
 - compiler validation
-- schema serialization
+- structured rule compilation
 - filtering workflows
 
 ---
@@ -898,7 +801,7 @@ The test suite under `tests/` also demonstrates behavior for:
 ```python
 from dataclasses import dataclass
 
-from pyspecification import ObjectRulesRegistry, PredicateCompiler, RuleSchema
+from pyspecification import ObjectRulesRegistry, Predicate, PredicateCompiler
 
 
 @dataclass
@@ -955,9 +858,8 @@ rule_definition = {
     ],
 }
 
-schema = RuleSchema(**rule_definition)
 compiler = PredicateCompiler(registry.rules, lambda spec: Predicate(lambda _: True, operator="logical"))
-predicate = compiler.compile(schema.model_dump())
+predicate = compiler.compile(rule_definition)
 # is_admin() | (name__istartswith("admin") & age__between(18, 30))
 
 users = [
@@ -973,13 +875,13 @@ print([predicate(user) for user in users])
 
 ## Summary
 
-`pyspecification` brings together rule registration, predicate composition, schema validation, and runtime compilation in a compact library designed around functional and declarative rule authoring.
+`pyspecification` brings together rule registration, predicate composition, and runtime compilation in a compact library designed around functional and declarative rule authoring.
 
 It is a practical fit for projects that need to:
 
 - express business rules clearly
 - compose conditions without nested `if` chains
-- validate dynamic rule payloads
+- compile dynamic rule payloads
 - support filtering and policy evaluation
 - keep rule logic easy to test and maintain
 

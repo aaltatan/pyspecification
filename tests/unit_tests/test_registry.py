@@ -90,15 +90,6 @@ def test_obj_registry_not_registered(obj_registry: ObjectRulesRegistry[User, boo
     assert "Rule 'non_existent' does not exist" in str(exc.value)
 
 
-def test_obj_registry_reserved_word(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
-    def reserved_rule(_: User) -> bool: ...
-
-    with pytest.raises(ValueError) as exc:
-        obj_registry.register_rule(reserved_rule, name="name")
-
-    assert "Rule name 'name' is reserved" in str(exc.value)
-
-
 def test_obj_registry_invalid_name(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     def invalid_name_rule(_: User) -> bool: ...
 
@@ -241,17 +232,6 @@ def test_sub_registry_not_registered(
         _ = sub_registry["non_existent"]
 
     assert "Rule 'non_existent' does not exist" in str(exc.value)
-
-
-def test_sub_registry_reserved_word(
-    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
-) -> None:
-    def reserved_rule(_: dict[str, Any], __: str) -> bool: ...
-
-    with pytest.raises(ValueError) as exc:
-        sub_registry.register_rule(reserved_rule, name="name")
-
-    assert "Rule name 'name' is reserved" in str(exc.value)
 
 
 def test_sub_registry_invalid_name(

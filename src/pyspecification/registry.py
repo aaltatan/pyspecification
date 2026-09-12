@@ -3,7 +3,6 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, Concatenate
 
-from .constants import RESERVED_WORDS
 from .exceptions import RuleAlreadyRegisteredError, RuleDoesNotExistError
 from .predicate import OperatorType, Predicate, ReturnType
 from .processors import DEFAULT_PROCESSORS, ProcessFn, process_arguments
@@ -412,10 +411,6 @@ def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
 
     if rule_name == "<lambda>":
         msg = "You must provide a name for the rule when using a lambda function"
-        raise ValueError(msg)
-
-    if rule_name.lower() in RESERVED_WORDS:
-        msg = f"Rule name '{rule_name}' is reserved"
         raise ValueError(msg)
 
     validate_python_vars_fn_naming_convention(rule_name)

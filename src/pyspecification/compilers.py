@@ -3,9 +3,8 @@ from collections.abc import Callable
 from pprint import pformat
 from typing import Any, Literal, TypedDict, TypeGuard
 
-from pydantic import TypeAdapter
-
 from .exceptions import MissingArgumentError, RuleDoesNotExistError, is_missing_argument_exception
+from .json_schema import get_json_schema
 from .predicate import Predicate, ReturnType
 
 type ExpressionDict = ExpressionWrapperDict | PredicateDict
@@ -39,9 +38,7 @@ def is_predicate_dict(d: Any) -> TypeGuard[PredicateDict]:
     )
 
 
-def is_expression_wrapper_dict(
-    d: Any,
-) -> TypeGuard[ExpressionWrapperDict]:
+def is_expression_wrapper_dict(d: Any) -> TypeGuard[ExpressionWrapperDict]:
     return (
         isinstance(d, dict)
         and all(key in d for key in EXPRESSION_WRAPPER_DICT_KEYS)
@@ -184,10 +181,10 @@ def _invalid_expression_message(expression: Any, path: str) -> str:
             "Expected an expression matching one of these schemas:",
             "",
             "Predicate:",
-            json.dumps(TypeAdapter(PredicateDict).json_schema(), indent=2),
+            json.dumps(get_json_schema(PredicateDict), indent=2),
             "",
             "Expression wrapper:",
-            json.dumps(TypeAdapter(ExpressionWrapperDict).json_schema(), indent=2),
+            json.dumps(get_json_schema(ExpressionWrapperDict), indent=2),
             "",
             "Received:",
             pformat(expression, sort_dicts=False, width=88),
