@@ -114,7 +114,8 @@ class PredicateCompiler[T, R: ReturnType]:
 
         rule = compiler.compile(rule_data)
 
-        assert all(rule(user) for user in users)
+        print(rule(User("admin", 25, True)))  # True
+        assert rule(User("admin", 25, True))
 
 
     if __name__ == "__main__":

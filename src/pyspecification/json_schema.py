@@ -85,27 +85,22 @@ def get_rule_json_schema(rule: Callable[..., Any]) -> dict[str, Any]:
 
     def main() -> None:
         schema = get_rule_json_schema(is_admin)
-        print(schema)
-        # {"return": {"type": "boolean"}}
+        print(schema)  # {'return': {'type': 'boolean'}}
 
         schema = get_rule_json_schema(name__istartswith)
-        print(schema)
-        # {"value": {"type": "string"}, "return": {"type": "boolean"}}
+        print(schema)  # {'value': {'type': 'string'}, 'return': {'type': 'boolean'}}
 
         schema = get_rule_json_schema(age__between)
-        print(schema)
-        # {
-        #     "min_age": {"type": "integer"},
-        #     "max_age": {"type": "integer"},
-        #     "return": {"type": "boolean"},
-        # }
+        print(
+            schema
+        )  # {'min_age': {'type': 'integer'}, 'max_age': {'type': 'integer'}, 'return': {'type': 'boolean'}}
 
 
     if __name__ == "__main__":
         main()
     ```
 
-    """
+    """  # noqa: E501
     annotations = get_annotations(rule)
     parameters = list(signature(rule).parameters)
     schema: dict[str, Any] = {}

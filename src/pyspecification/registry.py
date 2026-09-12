@@ -69,12 +69,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         ]
 
         print([e for e in EMPLOYEES if rule(e)])
-
-        # [
-        #     User(name="Alice", age=18, is_admin=True),
-        #     User(name="Admin", age=18, is_admin=False),
-        #     User(name="Eve", age=8, is_admin=True),
-        # ]
+        # [User(name='Alice', age=18, is_admin=True), User(name='Admin', age=18, is_admin=False), User(name='Eve', age=8, is_admin=True)]
 
 
     if __name__ == "__main__":
@@ -229,8 +224,8 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
 
 
     def main() -> None:
-        # Manual composition: name == "abdullah" AND age >= 18
-        rule = reg["string__ieq"]("name", "a") | reg["int__ge"]("age", 18)
+        # Manual composition: name == "alice" OR age >= 18
+        rule = reg["string__ieq"]("name", "alice") | reg["int__ge"]("age", 18)
 
         EMPLOYEES = [
             {"name": "Alice", "age": 5},
@@ -242,13 +237,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         ]
 
         print([e for e in EMPLOYEES if rule(e)])
-
-        # [
-        #     {"name": "Alice", "age": 5},
-        #     {"name": "Admin", "age": 6},
-        #     {"name": "David", "age": 25},
-        #     {"name": "Eve", "age": 30},
-        # ]
+        # [{'name': 'Alice', 'age': 5}, {'name': 'David', 'age': 25}, {'name': 'Eve', 'age': 30}]
 
 
     if __name__ == "__main__":

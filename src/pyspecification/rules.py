@@ -69,12 +69,7 @@ def object_rule[T, R: ReturnType, **P](
         ]
 
         print([e for e in EMPLOYEES if rule(e)])
-
-        # [
-        #     User(name="Alice", age=18, is_admin=True),
-        #     User(name="Admin", age=18, is_admin=False),
-        #     User(name="Eve", age=8, is_admin=True),
-        # ]
+        # [User(name='Alice', age=18, is_admin=True), User(name='Admin', age=18, is_admin=False), User(name='Eve', age=8, is_admin=True)]
 
 
     if __name__ == "__main__":
@@ -137,7 +132,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
 
     def main() -> None:
-        rule = string__ieq("name", "a") | int__ge("age", 18)
+        rule = string__ieq("name", "alice") | int__ge("age", 18)
 
         EMPLOYEES = [
             {"name": "Alice", "age": 5},
@@ -149,13 +144,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
         ]
 
         print([e for e in EMPLOYEES if rule(e)])
-
-        # [
-        #     {"name": "Alice", "age": 5},
-        #     {"name": "Admin", "age": 6},
-        #     {"name": "David", "age": 25},
-        #     {"name": "Eve", "age": 30},
-        # ]
+        # [{'name': 'Alice', 'age': 5}, {'name': 'David', 'age': 25}, {'name': 'Eve', 'age': 30}]
 
 
     if __name__ == "__main__":

@@ -326,7 +326,7 @@ predicate = compiler.compile(filter_rule_data)
 
 with SessionLocal() as session:
     users = session.query(User).filter(predicate(User)).all()
-    print([user.name for user in users])
+    print([user.name for user in users])  # ['Abdullah', 'Bob', 'Charlie', 'Eve']
 ```
 
 This pattern is especially useful when you want:
@@ -566,10 +566,7 @@ def name__istartswith(user: User, value: str) -> bool:
 
 
 print(get_rule_json_schema(name__istartswith))
-# {
-#   "value": {"type": "string"},
-#   "return": {"type": "boolean"},
-# }
+# {'value': {'type': 'string'}, 'return': {'type': 'boolean'}}
 ```
 
 This is useful for:
@@ -868,7 +865,7 @@ users = [
     User("Charlie", 12, False),
 ]
 
-print([predicate(user) for user in users])
+print([predicate(user) for user in users])  # [True, True, False]
 ```
 
 ---
