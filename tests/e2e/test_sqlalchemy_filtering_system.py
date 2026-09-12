@@ -105,7 +105,7 @@ def sqlalchemy_compiler(
     return PredicateCompiler(
         rules.rules,
         lambda schema: Predicate(
-            lambda _: and_(True) if schema["operator"] == "and" else or_(False),  # noqa: FBT003
+            lambda _: and_(True) if schema["operator"] == "all" else or_(False),  # noqa: FBT003
             operator="bitwise",
         ),
     )
@@ -147,7 +147,7 @@ def test_query(session: Session) -> None:
         ),
         (
             {
-                "operator": "or",
+                "operator": "any",
                 "expressions": [
                     {"-is_admin": []},
                     {"age__ge": [18]},

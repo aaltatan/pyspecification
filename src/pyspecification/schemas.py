@@ -104,7 +104,7 @@ class ExpressionsWrapperSchema(BaseModel):
 
     type: Annotated[Literal["wrapper"], Field(exclude=True)] = "wrapper"
 
-    operator: Literal["and", "or"] = "and"
+    operator: Literal["all", "any"] = "all"
     inverse: bool = False
     expressions: list["ExpressionType"] = Field(min_length=1)
 
@@ -117,7 +117,7 @@ class ExpressionsWrapperSchema(BaseModel):
             and len(data) > 1
         ):
             return {
-                "operator": "and",
+                "operator": "all",
                 "inverse": False,
                 "expressions": [{key: value} for key, value in data.items()],
             }

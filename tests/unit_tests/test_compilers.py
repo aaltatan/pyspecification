@@ -73,7 +73,7 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
                 User(name="admin", age=20, is_admin=False),
             ],
             {
-                "operator": "or",
+                "operator": "any",
                 "expressions": [
                     {"is_admin": []},
                     {
@@ -90,7 +90,7 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
                 User(name="admin", age=20, is_admin=False),
             ],
             {
-                "operator": "or",
+                "operator": "any",
                 "inverse": True,
                 "expressions": [
                     {"is_admin": []},
@@ -123,7 +123,7 @@ def test_compiler(
                 {"name__istartswith": ["admin"]},
                 {"age__between": [18, 30]},
                 {
-                    "operator": "or",
+                    "operator": "any",
                     "expressions": [
                         {"is_admin": []},
                         {
@@ -166,7 +166,7 @@ def test_compiler_reports_nested_invalid_expression_path(
     with pytest.raises(TypeError, match=r"Invalid expression at \$\.expressions\[1\]"):
         compiler.compile(
             {
-                "operator": "and",
+                "operator": "all",
                 "inverse": False,
                 "expressions": [
                     {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},

@@ -298,13 +298,13 @@ def age__le(model: type[User], value: int) -> ColumnElement[bool]:
 compiler = PredicateCompiler(
     rules.rules,
     lambda schema: Predicate(
-        lambda _: and_(True) if schema["operator"] == "and" else or_(False),
+        lambda _: and_(True) if schema["operator"] == "all" else or_(False),
         operator="bitwise",
     ),
 )
 
 filter_rule_data = {
-    "operator": "or",
+    "operator": "any",
     "expressions": [
         {"-is_admin": []},
         {"age__ge": [18]},
@@ -415,11 +415,11 @@ rules = {
 
 compiler = PredicateCompiler(
     rules,
-    lambda schema: Predicate(lambda _: schema["operator"] == "and", operator="logical"),
+    lambda schema: Predicate(lambda _: schema["operator"] == "all", operator="logical"),
 )
 
 rule_data = {
-    "operator": "or",
+    "operator": "any",
     "expressions": [
         {"is_admin": []},
         {
@@ -508,7 +508,7 @@ Use a wrapper to combine predicates. A wrapper has an `operator`, an
 
 ```json
 {
-    "operator": "and",
+    "operator": "all",
     "expressions": [
         {
             "name": "is_admin",
@@ -527,12 +527,12 @@ Use a wrapper to combine predicates. A wrapper has an `operator`, an
 }
 ```
 
-`operator` must be either `"and"` or `"or"`. Expressions can be nested to
+`operator` must be either `"all"` or `"any"`. Expressions can be nested to
 represent more complex logic:
 
 ```json
 {
-    "operator": "or",
+    "operator": "any",
     "expressions": [
         {
             "name": "is_admin",
@@ -541,7 +541,7 @@ represent more complex logic:
             "inverse": false
         },
         {
-            "operator": "and",
+            "operator": "all",
             "expressions": [
                 {
                     "name": "name__istartswith",
@@ -567,7 +567,7 @@ You can also invert a complete wrapper:
 
 ```json
 {
-    "operator": "or",
+    "operator": "any",
     "expressions": [
         {
             "name": "is_admin",
@@ -614,7 +614,7 @@ before compilation.
 from pyspecification import RuleSchema
 
 rule_data = {
-    "operator": "and",
+    "operator": "all",
     "expressions": [
         {"name__startswith": "admin"},
         {"age__gt": 18},
@@ -750,13 +750,13 @@ def age__ge(model: type[User], value: int) -> ColumnElement[bool]:
 compiler = PredicateCompiler(
     rules.rules,
     lambda schema: Predicate(
-        lambda _: and_(True) if schema["operator"] == "and" else or_(False),
+        lambda _: and_(True) if schema["operator"] == "all" else or_(False),
         operator="bitwise",
     ),
 )
 
 filter_rule = {
-    "operator": "or",
+    "operator": "any",
     "expressions": [
         {"is_admin": []},
         {"age__ge": [18]},
@@ -911,7 +911,7 @@ def age__between(user: User, min_age: int, max_age: int) -> bool:
 
 
 rule_definition = {
-    "operator": "or",
+    "operator": "any",
     "expressions": [
         {"is_admin": []},
         {

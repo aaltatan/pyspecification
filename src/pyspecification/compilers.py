@@ -27,7 +27,7 @@ class PredicateDict(TypedDict):
 class ExpressionWrapperDict(TypedDict):
     """A dictionary representation of an expression."""
 
-    operator: Literal["and", "or"]
+    operator: Literal["all", "any"]
     expressions: list["ExpressionWrapperDict | PredicateDict"]
     inverse: bool
 
@@ -84,11 +84,11 @@ class PredicateCompiler[T, R: ReturnType]:
                 "name__istartswith": name__istartswith,
                 "age__between": age__between,
             },
-            lambda schema: Predicate(lambda _: schema["operator"] == "and", operator="logical"),
+            lambda schema: Predicate(lambda _: schema["operator"] == "all", operator="logical"),
         )
 
         rule_data = {
-            "operator": "or",
+            "operator": "any",
             "inverse": False,
             "expressions": [
                 {
@@ -98,7 +98,7 @@ class PredicateCompiler[T, R: ReturnType]:
                     "kwargs": {},
                 },
                 {
-                    "operator": "and",
+                    "operator": "all",
                     "inverse": False,
                     "expressions": [
                         {
@@ -172,7 +172,7 @@ class PredicateCompiler[T, R: ReturnType]:
         for index, expression in enumerate(wrapper["expressions"]):
             compiled_predicate = self._compile(expression, f"{path}.expressions[{index}]")
 
-            if wrapper["operator"] == "and":
+            if wrapper["operator"] == "all":
                 predicate &= compiled_predicate
             else:
                 predicate |= compiled_predicate

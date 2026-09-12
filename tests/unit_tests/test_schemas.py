@@ -75,7 +75,7 @@ def test_predicate_schema(
                     ]
                 },
                 {
-                    "operator": "and",
+                    "operator": "all",
                     "inverse": False,
                     "expressions": [
                         {
@@ -145,7 +145,7 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                     {"name": "name__startswith", "kwargs": {"value": "Abdullah"}},
                     {"age__gt": 18, "is_admin": True},
                     {
-                        "operator": "or",
+                        "operator": "any",
                         "inverse": True,
                         "expressions": [
                             {"name": "age__gt", "args": [18]},
@@ -167,7 +167,7 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                             ]
                         ),
                         ExpressionsWrapperSchema(
-                            operator="or",
+                            operator="any",
                             inverse=True,
                             expressions=[
                                 PredicateSchema(name="age__gt", args=[18]),
