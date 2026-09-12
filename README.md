@@ -340,6 +340,140 @@ This pattern is especially useful when you want:
 
 ---
 
+### 6. Django ORM integration example
+
+This example demonstrates how to use `pyspecification` with Django models.
+`pyspecification` does not import Django or provide a Django-specific adapter;
+the rules return Django `Q` objects, while the existing bitwise predicate
+composition supplies `&`, `|`, and `~` support.
+
+```python
+# models.py
+from typing import Any, Self
+
+from django.db import models
+from pyspecification import Predicate
+
+
+class EmployeeQuerySet(models.QuerySet):
+    def filter_by_rule(self, rule: Predicate[Any, models.Q]) -> Self:
+        return self.filter(rule(Employee))
+
+
+class EmployeeManager(models.Manager):
+    def get_queryset(self) -> EmployeeQuerySet:
+        return EmployeeQuerySet(self.model, using=self._db)
+
+    def filter_by_rule(self, rule: Predicate[Any, models.Q]) -> EmployeeQuerySet:
+        return self.get_queryset().filter_by_rule(rule)
+
+
+class Employee(models.Model):
+    name = models.CharField(max_length=100)
+    age = models.IntegerField()
+    is_admin = models.BooleanField(default=False)
+
+    objects = EmployeeManager()
+
+    def __str__(self) -> str:
+        return self.name
+```
+
+```python
+# rules.py
+from typing import Any
+
+from pyspecification import ObjectRulesRegistry
+from django.db.models import Q
+
+
+registry = ObjectRulesRegistry[Any, Q](operator="bitwise")
+
+
+@registry.rule()
+def is_admin(_: Any) -> Q:
+    return Q(is_admin=True)
+
+
+@registry.rule()
+def name__eq(_: Any, value: str) -> Q:
+    return Q(name=value)
+
+
+@registry.rule()
+def age__gte(_: Any, value: int) -> Q:
+    return Q(age__gte=value)
+
+
+@registry.rule()
+def age__lte(_: Any, value: int) -> Q:
+    return Q(age__lte=value)
+```
+
+```python
+# views.py
+from typing import Any
+
+from django.db.models import Q
+from django.http import HttpRequest, HttpResponse
+from pyspecification import Predicate, PredicateCompiler
+
+from .rules import registry
+from .models import Employee
+
+
+FILTER_RULE = {
+    "operator": "any",
+    "expressions": [
+        {
+            "name": "is_admin",
+            "args": [],
+            "kwargs": {},
+            "inverse": False,
+        },
+        {
+            "operator": "all",
+            "expressions": [
+                {
+                    "name": "name__eq",
+                    "args": ["admin"],
+                    "kwargs": {},
+                    "inverse": False,
+                },
+                {
+                    "name": "age__gte",
+                    "args": [18],
+                    "kwargs": {},
+                    "inverse": False,
+                },
+            ]
+        }
+    ]
+}
+
+compiler = PredicateCompiler[Any, Q](
+    registry.rules,
+    lambda _: Predicate(lambda _: Q(), operator="bitwise"),
+)
+
+def filter_employees(request: HttpRequest) -> HttpResponse:
+    predicate = compiler.compile(FILTER_RULE)
+    employees = Employee.objects.filter_by_rule(predicate)
+    return HttpResponse(f"Employees: {employees}")
+```
+
+The model, rule, and view snippets can live in their normal Django app
+modules. No Django settings or model changes are required beyond the standard
+Django project setup.
+
+This pattern is especially useful when you want:
+
+- declarative Django queryset filters
+- reusable admin and dashboard filter rules
+- object-level permissions backed by Django `Q` expressions
+
+---
+
 ## Custom processors
 
 Rules can apply argument processors to coerce values before evaluation.
