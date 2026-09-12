@@ -10,7 +10,7 @@ def logical_compiler_getter() -> CompilerGetter:
         return PredicateCompiler(
             rules=rules,
             initial_predicate_factory=lambda schema: Predicate(
-                lambda _: schema["operator"] == "and",
+                lambda _: schema["operator"] == "all",
                 operator="logical",
             ),
         )
