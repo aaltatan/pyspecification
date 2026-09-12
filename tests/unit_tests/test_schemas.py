@@ -68,6 +68,7 @@ def test_predicate_schema(
         [
             (
                 {
+                    "operator": "all",
                     "expressions": [
                         {"name__len_le": 10},
                         {"-name__len_le": 10},
@@ -139,6 +140,7 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
     [
         (
             {
+                "operator": "all",
                 "expressions": [
                     {"name__len_le": 10},
                     {"name": "name__contains", "args": ["Abdullah"]},
@@ -156,11 +158,13 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
             },
             RuleSchema(
                 root=ExpressionsWrapperSchema(
+                    operator="all",
                     expressions=[
                         SimplePredicateSchema(root={"name__len_le": 10}),
                         PredicateSchema(name="name__contains", args=["Abdullah"]),
                         PredicateSchema(name="name__startswith", kwargs={"value": "Abdullah"}),
                         ExpressionsWrapperSchema(
+                            operator="all",
                             expressions=[
                                 SimplePredicateSchema(root={"age__gt": 18}),
                                 SimplePredicateSchema(root={"is_admin": True}),
@@ -174,7 +178,7 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
                                 PredicateSchema(name="is_admin", args=[True]),
                             ],
                         ),
-                    ]
+                    ],
                 )
             ),
         )

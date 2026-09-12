@@ -423,6 +423,7 @@ rule_data = {
     "expressions": [
         {"is_admin": []},
         {
+            "operator": "all",
             "expressions": [
                 {"name__istartswith": "admin"},
                 {"age__between": [18, 30]},
@@ -915,6 +916,7 @@ rule_definition = {
     "expressions": [
         {"is_admin": []},
         {
+            "operator": "all",
             "expressions": [
                 {"name__istartswith": "admin"},
                 {"age__between": [18, 30]},

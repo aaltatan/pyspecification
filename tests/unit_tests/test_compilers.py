@@ -119,6 +119,7 @@ def test_compiler(
     [
         {"rule_not_exists": 20},
         {
+            "operator": "all",
             "expressions": [
                 {"name__istartswith": ["admin"]},
                 {"age__between": [18, 30]},
