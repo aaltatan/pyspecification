@@ -54,8 +54,8 @@ class PredicateCompiler[T, R: ReturnType]:
     """A compiler for predicates.
 
     Args:
-        rules (dict[str, Callable[..., Predicate[Any, Any]]]): The rules to use for compiling.
-        initial_predicate_factory (Callable[[ExpressionWrapperDict], Predicate[Any, Any]]): The factory to use for creating initial predicates.
+        rules (dict[str, Callable[..., Predicate[T, R]]]): The rules to use for compiling.
+        initial_predicate_factory (Callable[[ExpressionWrapperDict], Predicate[T, R]]): The factory to use for creating initial predicates.
 
     Example:
     ```python
@@ -78,7 +78,7 @@ class PredicateCompiler[T, R: ReturnType]:
 
 
     def main() -> None:
-        compiler = PredicateCompiler(
+        compiler = PredicateCompiler[User, bool](
             {
                 "is_admin": is_admin,
                 "name__istartswith": name__istartswith,
