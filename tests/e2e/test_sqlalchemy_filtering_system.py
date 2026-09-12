@@ -120,37 +120,36 @@ def test_query(session: Session) -> None:
     "filter_rule_data, expected_names",
     [
         (
-            {
-                "is_admin": [],
-            },
+            {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
             ("Abdullah", "Bob", "Eve"),
         ),
         (
-            {
-                "age__ge": [18],
-            },
+            {"name": "age__ge", "args": [18], "kwargs": {}, "inverse": False},
             ("Abdullah", "Charlie"),
         ),
         (
-            {
-                "name__iendswith": ["e"],
-            },
+            {"name": "name__iendswith", "args": ["e"], "kwargs": {}, "inverse": False},
             ("Charlie", "Eve"),
         ),
         (
             {
-                "age__ge": [18],
-                "age__le": [30],
-                "-is_admin": [],
+                "operator": "all",
+                "inverse": False,
+                "expressions": [
+                    {"name": "age__ge", "args": [18], "kwargs": {}, "inverse": False},
+                    {"name": "age__le", "args": [30], "kwargs": {}, "inverse": False},
+                    {"name": "is_admin", "args": [], "kwargs": {}, "inverse": True},
+                ],
             },
             ("Charlie",),
         ),
         (
             {
                 "operator": "any",
+                "inverse": False,
                 "expressions": [
-                    {"-is_admin": []},
-                    {"age__ge": [18]},
+                    {"name": "is_admin", "args": [], "kwargs": {}, "inverse": True},
+                    {"name": "age__ge", "args": [18], "kwargs": {}, "inverse": False},
                 ],
             },
             ("Abdullah", "Charlie", "David", "Rama"),
@@ -164,7 +163,9 @@ def test_filtering_system(
     expected_names: tuple[str, ...],
 ) -> None:
     # Arrange
-    filter_expression = sqlalchemy_compiler.compile(RuleSchema(**filter_rule_data).model_dump())
+    filter_expression = sqlalchemy_compiler.compile(
+        RuleSchema(**filter_rule_data).model_dump(),  # type: ignore  # noqa: PGH003
+    )
     filtered_data = session.query(User).filter(filter_expression(User)).all()
 
     # Act & Assert
@@ -176,20 +177,61 @@ def test_filtering_system(
     "filter_rule_data, exception_class",
     [
         # def string__istartswith(obj: type[User], *, value: str) -> bool:
-        ({"name__istartswith": []}, MissingArgumentError),
-        ({"name__istartswith": ["a", "xxx"]}, TooManyArgumentsError),
-        ({"name__istartswith": {}}, MissingArgumentError),
-        ({"name__istartswith": {"value_not_exists": "sss"}}, UnexpectedKeywordArgumentError),
         (
-            {"name__istartswith": {"value": "a", "value_not_exists": "sss"}},
+            {"name": "name__istartswith", "args": [], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {"name": "name__istartswith", "args": ["a", "xxx"], "kwargs": {}, "inverse": False},
+            TooManyArgumentsError,
+        ),
+        (
+            {"name": "name__istartswith", "args": [], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {
+                "name": "name__istartswith",
+                "args": [],
+                "kwargs": {"value_not_exists": "sss"},
+                "inverse": False,
+            },
+            UnexpectedKeywordArgumentError,
+        ),
+        (
+            {
+                "name": "name__istartswith",
+                "args": [],
+                "kwargs": {"value": "a", "value_not_exists": "sss"},
+                "inverse": False,
+            },
             UnexpectedKeywordArgumentError,
         ),
         # def string__icontains(obj: type[User], value: str) -> bool:
-        ({"name__icontains": []}, MissingArgumentError),
-        ({"name__icontains": ["a", "xxx"]}, TooManyArgumentsError),
-        ({"name__icontains": {"value_not_exists": "sss"}}, UnexpectedKeywordArgumentError),
         (
-            {"name__icontains": {"value": "a", "value_not_exists": "sss"}},
+            {"name": "name__icontains", "args": [], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {"name": "name__icontains", "args": ["a", "xxx"], "kwargs": {}, "inverse": False},
+            TooManyArgumentsError,
+        ),
+        (
+            {
+                "name": "name__icontains",
+                "args": [],
+                "kwargs": {"value_not_exists": "sss"},
+                "inverse": False,
+            },
+            UnexpectedKeywordArgumentError,
+        ),
+        (
+            {
+                "name": "name__icontains",
+                "args": [],
+                "kwargs": {"value": "a", "value_not_exists": "sss"},
+                "inverse": False,
+            },
             UnexpectedKeywordArgumentError,
         ),
     ],
@@ -200,5 +242,7 @@ def test_filtering_system_with_invalid_inputs(
     sqlalchemy_compiler: PredicateCompiler[type[User], ColumnElement[bool]],
 ) -> None:
     with pytest.raises(exception_class):
-        predicate = sqlalchemy_compiler.compile(RuleSchema(**filter_rule_data).model_dump())
+        predicate = sqlalchemy_compiler.compile(
+            RuleSchema(**filter_rule_data).model_dump(),  # type: ignore  # noqa: PGH003
+        )
         predicate(User)

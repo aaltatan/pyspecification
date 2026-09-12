@@ -51,19 +51,28 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
     [
         (
             [User(name="Abdullah", age=18, is_admin=True)],
-            {"is_admin": []},
+            {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
             is_admin(),
         ),
         (
             [User(name="Abdullah", age=18, is_admin=False)],
-            {"-is_admin": []},
+            {"name": "is_admin", "args": [], "kwargs": {}, "inverse": True},
             ~is_admin(),
         ),
         (
             [User(name="admin", age=18, is_admin=True)],
             {
-                "name__istartswith": ["admin"],
-                "age__between": [18, 30],
+                "operator": "all",
+                "inverse": False,
+                "expressions": [
+                    {
+                        "name": "name__istartswith",
+                        "args": ["admin"],
+                        "kwargs": {},
+                        "inverse": False,
+                    },
+                    {"name": "age__between", "args": [18, 30], "kwargs": {}, "inverse": False},
+                ],
             },
             name__istartswith("admin") & age__between(18, 30),
         ),
@@ -74,11 +83,31 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
             ],
             {
                 "operator": "any",
+                "inverse": False,
                 "expressions": [
-                    {"is_admin": []},
                     {
-                        "name__istartswith": ["admin"],
-                        "age__between": [18, 30],
+                        "name": "is_admin",
+                        "args": [],
+                        "kwargs": {},
+                        "inverse": False,
+                    },
+                    {
+                        "operator": "all",
+                        "inverse": False,
+                        "expressions": [
+                            {
+                                "name": "name__istartswith",
+                                "args": ["admin"],
+                                "kwargs": {},
+                                "inverse": False,
+                            },
+                            {
+                                "name": "age__between",
+                                "args": [18, 30],
+                                "kwargs": {},
+                                "inverse": False,
+                            },
+                        ],
                     },
                 ],
             },
@@ -93,10 +122,24 @@ def compiler(logical_compiler_getter: CompilerGetter) -> PredicateCompiler[User,
                 "operator": "any",
                 "inverse": True,
                 "expressions": [
-                    {"is_admin": []},
+                    {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
                     {
-                        "name__istartswith": ["admin"],
-                        "age__between": [18, 30],
+                        "operator": "all",
+                        "inverse": False,
+                        "expressions": [
+                            {
+                                "name": "name__istartswith",
+                                "args": ["admin"],
+                                "kwargs": {},
+                                "inverse": False,
+                            },
+                            {
+                                "name": "age__between",
+                                "args": [18, 30],
+                                "kwargs": {},
+                                "inverse": False,
+                            },
+                        ],
                     },
                 ],
             },
@@ -110,30 +153,48 @@ def test_compiler(
     predicate: Predicate[Any, Any],
     compiler: PredicateCompiler[User, bool],
 ) -> None:
-    compiled_predicate = compiler.compile(RuleSchema(**rule_dict).model_dump())
+    compiled_predicate = compiler.compile(
+        RuleSchema(**rule_dict).model_dump(),  # type: ignore  # noqa: PGH003
+    )
     assert all(compiled_predicate(user) for user in users) == all(predicate(user) for user in users)
 
 
 @pytest.mark.parametrize(
     "rule_dict",
     [
-        {"rule_not_exists": 20},
+        {"name": "rule_not_exists", "args": [20], "kwargs": {}, "inverse": False},
         {
             "operator": "all",
+            "inverse": False,
             "expressions": [
-                {"name__istartswith": ["admin"]},
-                {"age__between": [18, 30]},
+                {"name": "name__istartswith", "args": ["admin"], "kwargs": {}, "inverse": False},
+                {"name": "age__between", "args": [18, 30], "kwargs": {}, "inverse": False},
                 {
                     "operator": "any",
+                    "inverse": False,
                     "expressions": [
-                        {"is_admin": []},
+                        {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
                         {
-                            "name__istartswith": ["admin"],
-                            "rule_not_exists": [18, 30],  # this should raise an error
+                            "operator": "all",
+                            "inverse": False,
+                            "expressions": [
+                                {
+                                    "name": "name__istartswith",
+                                    "args": ["admin"],
+                                    "kwargs": {},
+                                    "inverse": False,
+                                },
+                                {
+                                    "name": "rule_not_exists",
+                                    "args": [18, 30],
+                                    "kwargs": {},
+                                    "inverse": False,
+                                },
+                            ],
                         },
                     ],
                 },
-            ]
+            ],
         },
     ],
 )
@@ -142,7 +203,9 @@ def test_compiler_with_invalid_rule_name(
     rule_dict: dict[str, Any],
 ) -> None:
     with pytest.raises(RuleDoesNotExistError, match="Rule 'rule_not_exists' does not exist"):
-        compiler.compile(RuleSchema(**rule_dict).model_dump())
+        compiler.compile(
+            RuleSchema(**rule_dict).model_dump(),  # type: ignore  # noqa: PGH003
+        )
 
 
 def test_compiler_with_invalid_rule_dict(compiler: PredicateCompiler) -> None:

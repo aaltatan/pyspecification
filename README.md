@@ -306,8 +306,18 @@ compiler = PredicateCompiler(
 filter_rule_data = {
     "operator": "any",
     "expressions": [
-        {"-is_admin": []},
-        {"age__ge": [18]},
+        {
+            "name": "is_admin",
+            "args": [],
+            "kwargs": {},
+            "inverse": False,
+        },
+        {
+            "name": "age__ge",
+            "args": [18],
+            "kwargs": {},
+            "inverse": False,
+        }
     ],
 }
 
@@ -421,13 +431,28 @@ compiler = PredicateCompiler(
 rule_data = {
     "operator": "any",
     "expressions": [
-        {"is_admin": []},
+        {
+            "name": "is_admin",
+            "args": [],
+            "kwargs": {},
+            "inverse": False,
+        },
         {
             "operator": "all",
             "expressions": [
-                {"name__istartswith": "admin"},
-                {"age__between": [18, 30]},
-            ]
+                {
+                    "name": "name__istartswith", 
+                    "args": ["admin"], 
+                    "kwargs": {}, 
+                    "inverse": False,
+                },
+                {
+                    "name": "rule_not_exists", 
+                    "args": [18, 30], 
+                    "kwargs": {}, 
+                    "inverse": False,
+                },
+            ],
         },
     ],
 }
@@ -443,7 +468,7 @@ print(predicate(User("admin", 25, True)))  # True
 
 ```json
 {
-    "name": "rule_name",
+    "name": "<rule_name>",
     "args": [],
     "kwargs": {},
     "inverse": false
@@ -587,23 +612,11 @@ You can also invert a complete wrapper:
 }
 ```
 
-For shorthand forms, validate the payload with `RuleSchema` first. It converts
-them into the normalized predicate and wrapper schemas:
-
-```python
-{"is_admin": []}
-{"-is_admin": []}
-{"name__istartswith": "admin"}
-{"age__between": [18, 30]}
-{"name__startswith": {"value": "admin"}}
-```
-
 The compiler raises `RuleDoesNotExistError` when a predicate name is not in the
 compiler's rule mapping. If the dictionary passed directly to `compile()` does
 not match a predicate or wrapper schema, it raises `TypeError`. The error
 includes the location of the invalid expression, the expected schemas, and the
-received value. Validate external or shorthand payloads with `RuleSchema`
-before compilation.
+received value. Validate external payloads with `RuleSchema` before compilation.
 
 ---
 
@@ -617,8 +630,18 @@ from pyspecification import RuleSchema
 rule_data = {
     "operator": "all",
     "expressions": [
-        {"name__startswith": "admin"},
-        {"age__gt": 18},
+        {
+            "name": "name__startswith",
+            "args": ["admin"],
+            "kwargs": {},
+            "inverse": False,
+        },
+        {
+            "name": "age__gt",
+            "args": [18],
+            "kwargs": {},
+            "inverse": False,
+        }
     ],
 }
 
@@ -759,8 +782,18 @@ compiler = PredicateCompiler(
 filter_rule = {
     "operator": "any",
     "expressions": [
-        {"is_admin": []},
-        {"age__ge": [18]},
+        {
+            "name": "is_admin",
+            "args": [],
+            "kwargs": {},
+            "inverse": False,
+        },
+        {
+            "name": "age__ge",
+            "args": [18],
+            "kwargs": {},
+            "inverse": False,
+        },
     ],
 }
 
@@ -914,12 +947,27 @@ def age__between(user: User, min_age: int, max_age: int) -> bool:
 rule_definition = {
     "operator": "any",
     "expressions": [
-        {"is_admin": []},
+        {
+            "name": "is_admin",
+            "args": [],
+            "kwargs": {},
+            "inverse": False,
+        },
         {
             "operator": "all",
             "expressions": [
-                {"name__istartswith": "admin"},
-                {"age__between": [18, 30]},
+                {
+                    "name": "name__istartswith",
+                    "args": ["admin"],
+                    "kwargs": {},
+                    "inverse": False,
+                },
+                {
+                    "name": "age__between",
+                    "args": [18, 30],
+                    "kwargs": {},
+                    "inverse": False,
+                },
             ]
         },
     ],

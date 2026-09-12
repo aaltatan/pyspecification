@@ -5,61 +5,27 @@ from pyspecification.schemas import (
     ExpressionsWrapperSchema,
     PredicateSchema,
     RuleSchema,
-    SimplePredicateSchema,
 )
 
 
 @pytest.mark.parametrize(
-    "simple_predicate_data, predicate_data",
+    "predicate_data",
     [
-        (
-            {"_is_true": None},
-            {"name": "_is_true", "args": [], "kwargs": {}, "inverse": False},
-        ),
-        (
-            {"is_true": None},
-            {"name": "is_true", "args": [], "kwargs": {}, "inverse": False},
-        ),
-        (
-            {"is_true": []},
-            {"name": "is_true", "args": [], "kwargs": {}, "inverse": False},
-        ),
-        (
-            {"is_true": {}},
-            {"name": "is_true", "args": [], "kwargs": {}, "inverse": False},
-        ),
-        (
-            {"say_hello": "Abdullah"},
-            {"name": "say_hello", "args": ["Abdullah"], "kwargs": {}, "inverse": False},
-        ),
-        (
-            {"-say_hello": "Abdullah"},
-            {"name": "say_hello", "args": ["Abdullah"], "kwargs": {}, "inverse": True},
-        ),
-        (
-            {"-say_hello": ["Abdullah"]},
-            {"name": "say_hello", "args": ["Abdullah"], "kwargs": {}, "inverse": True},
-        ),
-        (
-            {"-say_hello": [{"value": "Abdullah"}]},
-            {"name": "say_hello", "args": [{"value": "Abdullah"}], "kwargs": {}, "inverse": True},
-        ),
-        (
-            {"-say_hello": {"value": "Abdullah"}},
-            {"name": "say_hello", "args": [], "kwargs": {"value": "Abdullah"}, "inverse": True},
-        ),
+        {"name": "_is_true", "args": [], "kwargs": {}, "inverse": False},
+        {"name": "is_true", "args": [], "kwargs": {}, "inverse": False},
+        {"name": "say_hello", "args": ["Abdullah"], "kwargs": {}, "inverse": False},
+        {"name": "say_hello", "args": ["Abdullah"], "kwargs": {}, "inverse": True},
+        {"name": "say_hello", "args": [{"value": "Abdullah"}], "kwargs": {}, "inverse": True},
+        {"name": "say_hello", "args": [], "kwargs": {"value": "Abdullah"}, "inverse": True},
     ],
 )
-def test_predicate_schema(
-    simple_predicate_data: dict[str, Any], predicate_data: dict[str, Any]
-) -> None:
-    simple_predicate = SimplePredicateSchema(root=simple_predicate_data)
+def test_predicate_schema(predicate_data: dict[str, Any]) -> None:
     predicate = PredicateSchema(**predicate_data)
 
-    assert simple_predicate.name == predicate.name == predicate_data["name"]
-    assert simple_predicate.args == predicate.args == predicate_data["args"]
-    assert simple_predicate.kwargs == predicate.kwargs == predicate_data["kwargs"]
-    assert simple_predicate.inverse == predicate.inverse == predicate_data["inverse"]
+    assert predicate.name == predicate_data["name"]
+    assert predicate.args == predicate_data["args"]
+    assert predicate.kwargs == predicate_data["kwargs"]
+    assert predicate.inverse == predicate_data["inverse"]
 
 
 @pytest.mark.parametrize(
@@ -69,11 +35,17 @@ def test_predicate_schema(
             (
                 {
                     "operator": "all",
+                    "inverse": False,
                     "expressions": [
-                        {"name__len_le": 10},
-                        {"-name__len_le": 10},
-                        {"name": "name__contains", "args": ["Abdullah"]},
-                    ]
+                        {"name": "name__len_le", "args": [10], "kwargs": {}, "inverse": False},
+                        {"name": "name__len_le", "args": [10], "kwargs": {}, "inverse": True},
+                        {
+                            "name": "name__contains",
+                            "args": ["Abdullah"],
+                            "kwargs": {},
+                            "inverse": False,
+                        },
+                    ],
                 },
                 {
                     "operator": "all",
@@ -107,15 +79,6 @@ def test_expression_schema_serialization(predicate: dict[str, Any], dumped: dict
     assert RuleSchema(**predicate).model_dump() == dumped
 
 
-def test_simple_predicate() -> None:
-    assert SimplePredicateSchema(root={"name": "is_true"}).type == "simple"
-
-
-def test_error_when_simple_predicate_has_multiple_keys() -> None:
-    with pytest.raises(ValueError):
-        SimplePredicateSchema(root={"is_admin": True, "name__startswith": "admin"})
-
-
 @pytest.mark.parametrize(
     "schema_dict",
     [
@@ -141,41 +104,76 @@ def test_invalid_naming_convention_predicate_schema(schema_dict: dict[str, Any])
         (
             {
                 "operator": "all",
+                "inverse": False,
                 "expressions": [
-                    {"name__len_le": 10},
-                    {"name": "name__contains", "args": ["Abdullah"]},
-                    {"name": "name__startswith", "kwargs": {"value": "Abdullah"}},
-                    {"age__gt": 18, "is_admin": True},
+                    {"name": "name__len_le", "args": [10], "kwargs": {}, "inverse": False},
+                    {
+                        "name": "name__contains",
+                        "args": ["Abdullah"],
+                        "kwargs": {},
+                        "inverse": False,
+                    },
+                    {
+                        "name": "name__startswith",
+                        "args": [],
+                        "kwargs": {"value": "Abdullah"},
+                        "inverse": False,
+                    },
+                    {
+                        "operator": "all",
+                        "inverse": False,
+                        "expressions": [
+                            {"name": "age__gt", "args": [18], "kwargs": {}, "inverse": False},
+                            {"name": "is_admin", "args": [True], "kwargs": {}, "inverse": False},
+                        ],
+                    },
                     {
                         "operator": "any",
                         "inverse": True,
                         "expressions": [
-                            {"name": "age__gt", "args": [18]},
-                            {"name": "is_admin", "args": [True]},
+                            {"name": "age__gt", "args": [18], "kwargs": {}, "inverse": False},
+                            {"name": "is_admin", "args": [True], "kwargs": {}, "inverse": False},
                         ],
                     },
-                ]
+                ],
             },
             RuleSchema(
                 root=ExpressionsWrapperSchema(
                     operator="all",
+                    inverse=False,
                     expressions=[
-                        SimplePredicateSchema(root={"name__len_le": 10}),
-                        PredicateSchema(name="name__contains", args=["Abdullah"]),
-                        PredicateSchema(name="name__startswith", kwargs={"value": "Abdullah"}),
+                        PredicateSchema(name="name__len_le", args=[10], kwargs={}, inverse=False),
+                        PredicateSchema(
+                            name="name__contains", args=["Abdullah"], kwargs={}, inverse=False
+                        ),
+                        PredicateSchema(
+                            name="name__startswith",
+                            args=[],
+                            kwargs={"value": "Abdullah"},
+                            inverse=False,
+                        ),
                         ExpressionsWrapperSchema(
                             operator="all",
+                            inverse=False,
                             expressions=[
-                                SimplePredicateSchema(root={"age__gt": 18}),
-                                SimplePredicateSchema(root={"is_admin": True}),
-                            ]
+                                PredicateSchema(
+                                    name="age__gt", args=[18], kwargs={}, inverse=False
+                                ),
+                                PredicateSchema(
+                                    name="is_admin", args=[True], kwargs={}, inverse=False
+                                ),
+                            ],
                         ),
                         ExpressionsWrapperSchema(
                             operator="any",
                             inverse=True,
                             expressions=[
-                                PredicateSchema(name="age__gt", args=[18]),
-                                PredicateSchema(name="is_admin", args=[True]),
+                                PredicateSchema(
+                                    name="age__gt", args=[18], kwargs={}, inverse=False
+                                ),
+                                PredicateSchema(
+                                    name="is_admin", args=[True], kwargs={}, inverse=False
+                                ),
                             ],
                         ),
                     ],

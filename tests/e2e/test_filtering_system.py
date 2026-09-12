@@ -117,22 +117,58 @@ def compiler(
     [
         (
             {
-                "string__iendswith": ["name", "altatan"],
-                "string__ieq": ["gender", "male"],
+                "operator": "all",
+                "inverse": False,
+                "expressions": [
+                    {
+                        "name": "string__iendswith",
+                        "inverse": False,
+                        "args": ["name", "altatan"],
+                        "kwargs": {},
+                    },
+                    {
+                        "name": "string__ieq",
+                        "inverse": False,
+                        "args": ["gender", "male"],
+                        "kwargs": {},
+                    },
+                ],
             },
             ("Abdullah Altatan", "Bob Altatan"),
         ),
         (
             {
-                "number__le": ["rank", 10],
-                "string__ieq": ["gender", "female"],
-                "-is_true": ["is_admin"],
+                "operator": "all",
+                "inverse": False,
+                "expressions": [
+                    {
+                        "name": "number__le",
+                        "inverse": False,
+                        "args": ["rank", 10],
+                        "kwargs": {},
+                    },
+                    {
+                        "name": "string__ieq",
+                        "inverse": False,
+                        "args": ["gender", "female"],
+                        "kwargs": {},
+                    },
+                    {
+                        "name": "is_true",
+                        "inverse": True,
+                        "args": ["is_admin"],
+                        "kwargs": {},
+                    },
+                ],
             },
             ("Rama Alsan",),
         ),
         (
             {
-                "datetime__gt": ["birthdate", "2001-06-01"],
+                "name": "datetime__gt",
+                "inverse": False,
+                "args": [],
+                "kwargs": {"key": "birthdate", "value": "2001-06-01"},
             },
             ("Eve Alsan", "Rama Alsan"),
         ),
@@ -144,7 +180,9 @@ def test_filtering_system(
     filter_rule_data: dict[str, Any],
     expected_names: tuple[str, ...],
 ) -> None:
-    predicate = compiler.compile(RuleSchema(**filter_rule_data).model_dump())
+    predicate = compiler.compile(
+        RuleSchema(**filter_rule_data).model_dump(),  # type: ignore  # noqa: PGH003
+    )
     filtered_data = [item for item in data if predicate(item)]
 
     assert all(item["name"] in expected_names for item in filtered_data)
@@ -155,53 +193,168 @@ def test_filtering_system(
     "filter_rule_data, exception_class",
     [
         # def string__startswith(obj: dict[str, Any], key: str, value: str, /) -> bool:
-        ({"string__startswith": []}, MissingArgumentError),
-        ({"string__startswith": ["name"]}, MissingArgumentError),
-        ({"string__startswith": ["name", "a", "xxx"]}, TooManyArgumentsError),
-        ({"string__startswith": {}}, MissingArgumentError),
-        ({"string__startswith": {"key": "name"}}, MissingArgumentError),
-        ({"string__startswith": {"value", "ssss"}}, MissingArgumentError),
         (
-            {"string__startswith": {"key": "name", "value_not_exists": "sss"}},
+            {"name": "string__startswith", "args": [], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {"name": "string__startswith", "args": ["name"], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {
+                "name": "string__startswith",
+                "args": ["name", "a", "xxx"],
+                "kwargs": {},
+                "inverse": False,
+            },
+            TooManyArgumentsError,
+        ),
+        (
+            {"name": "string__startswith", "args": [], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {"name": "string__startswith", "args": [], "kwargs": {"key": "name"}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {
+                "name": "string__startswith",
+                "args": [],
+                "kwargs": {"key": "name", "value_not_exists": "sss"},
+                "inverse": False,
+            },
             UnexpectedKeywordArgumentError,
         ),
         (
-            {"string__startswith": {"key": "name", "value": "a"}},
+            {
+                "name": "string__startswith",
+                "args": [],
+                "kwargs": {"key": "name", "value": "a"},
+                "inverse": False,
+            },
             PositionalOnlyArgumentError,
         ),
         (
-            {"string__startswith": {"key": "name", "value": "a", "value_not_exists": "sss"}},
+            {
+                "name": "string__startswith",
+                "args": [],
+                "kwargs": {"key": "name", "value": "a", "value_not_exists": "sss"},
+                "inverse": False,
+            },
             PositionalOnlyArgumentError,
         ),
         # def string__istartswith(obj: dict[str, Any], key: str, *, value: str) -> bool:
-        ({"string__istartswith": []}, MissingArgumentError),
-        ({"string__istartswith": ["name"]}, MissingArgumentError),
-        ({"string__istartswith": ["name", "a"]}, TooManyArgumentsError),
-        ({"string__istartswith": ["name", "a", "xxx"]}, TooManyArgumentsError),
-        ({"string__istartswith": {}}, MissingArgumentError),
-        ({"string__istartswith": {"key": "name"}}, MissingArgumentError),
-        ({"string__istartswith": {"value", "ssss"}}, MissingArgumentError),
         (
-            {"string__istartswith": {"key": "name", "value_not_exists": "sss"}},
+            {"name": "string__istartswith", "args": [], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {"name": "string__istartswith", "args": ["name"], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {"name": "string__istartswith", "args": ["name", "a"], "kwargs": {}, "inverse": False},
+            TooManyArgumentsError,
+        ),
+        (
+            {
+                "name": "string__istartswith",
+                "args": ["name", "a", "xxx"],
+                "kwargs": {},
+                "inverse": False,
+            },
+            TooManyArgumentsError,
+        ),
+        (
+            {
+                "name": "string__istartswith",
+                "args": [],
+                "kwargs": {},
+                "inverse": False,
+            },
+            MissingArgumentError,
+        ),
+        (
+            {
+                "name": "string__istartswith",
+                "args": [],
+                "kwargs": {"key": "name"},
+                "inverse": False,
+            },
+            MissingArgumentError,
+        ),
+        (
+            {
+                "name": "string__istartswith",
+                "args": [],
+                "kwargs": {"key": "name", "value_not_exists": "sss"},
+                "inverse": False,
+            },
             UnexpectedKeywordArgumentError,
         ),
         (
-            {"string__istartswith": {"key": "name", "value": "a", "value_not_exists": "sss"}},
+            {
+                "name": "string__istartswith",
+                "args": [],
+                "kwargs": {"key": "name", "value": "a", "value_not_exists": "sss"},
+                "inverse": False,
+            },
             UnexpectedKeywordArgumentError,
         ),
         # def string__icontains(obj: dict[str, Any], key: str, value: str) -> bool:
-        ({"string__icontains": []}, MissingArgumentError),
-        ({"string__icontains": ["name"]}, MissingArgumentError),
-        ({"string__icontains": ["name", "a", "xxx"]}, TooManyArgumentsError),
-        ({"string__icontains": {}}, MissingArgumentError),
-        ({"string__icontains": {"key": "name"}}, MissingArgumentError),
-        ({"string__icontains": {"value", "ssss"}}, MissingArgumentError),
         (
-            {"string__icontains": {"key": "name", "value_not_exists": "sss"}},
+            {
+                "name": "string__icontains",
+                "args": [],
+                "kwargs": {},
+                "inverse": False,
+            },
+            MissingArgumentError,
+        ),
+        (
+            {
+                "name": "string__icontains",
+                "args": ["name"],
+                "kwargs": {},
+                "inverse": False,
+            },
+            MissingArgumentError,
+        ),
+        (
+            {
+                "name": "string__icontains",
+                "args": ["name", "a", "xxx"],
+                "kwargs": {},
+                "inverse": False,
+            },
+            TooManyArgumentsError,
+        ),
+        (
+            {"name": "string__icontains", "args": [], "kwargs": {}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {"name": "string__icontains", "args": [], "kwargs": {"key": "name"}, "inverse": False},
+            MissingArgumentError,
+        ),
+        (
+            {
+                "name": "string__icontains",
+                "args": [],
+                "kwargs": {"key": "name", "value_not_exists": "sss"},
+                "inverse": False,
+            },
             UnexpectedKeywordArgumentError,
         ),
         (
-            {"string__icontains": {"key": "name", "value": "a", "value_not_exists": "sss"}},
+            {
+                "name": "string__icontains",
+                "args": [],
+                "kwargs": {"key": "name", "value": "a", "value_not_exists": "sss"},
+                "inverse": False,
+            },
             UnexpectedKeywordArgumentError,
         ),
     ],
@@ -212,7 +365,9 @@ def test_filtering_system_with_invalid_inputs(
     compiler: PredicateCompiler[dict[str, Any], bool],
 ) -> None:
     with pytest.raises(exception_class):
-        predicate = compiler.compile(RuleSchema(**filter_rule_data).model_dump())
+        predicate = compiler.compile(
+            RuleSchema(**filter_rule_data).model_dump(),  # type: ignore  # noqa: PGH003
+        )
         predicate({"name": "Abdullah", "age": 18, "is_admin": True})
 
 
@@ -222,8 +377,13 @@ def test_filtering_system_with_invalid_rule_name(
     with pytest.raises(RuleDoesNotExistError, match="Rule 'invalid_rule' does not exist"):
         compiler.compile(
             RuleSchema(
-                **{"invalid_rule": ["birthdate", "06-01-2001"]}  # type: ignore  # noqa: PGH003, PIE804
-            ).model_dump()
+                **{  # noqa: PIE804
+                    "name": "invalid_rule",
+                    "args": ["birthdate", "06-01-2001"],
+                    "kwargs": {},
+                    "inverse": False,
+                }
+            ).model_dump()  # type: ignore  # noqa: PGH003
         )
 
 
@@ -233,8 +393,13 @@ def test_filtering_system_with_invalid_datetime_format_arg(
     with pytest.raises(ProcessArgumentError, match="Argument '06-01-2001' failed to process"):
         compiler.compile(
             RuleSchema(
-                **{"datetime__gt": ["birthdate", "06-01-2001"]}  # type: ignore  # noqa: PGH003, PIE804
-            ).model_dump()
+                **{  # noqa: PIE804
+                    "name": "datetime__gt",
+                    "args": ["birthdate", "06-01-2001"],
+                    "kwargs": {},
+                    "inverse": False,
+                }
+            ).model_dump()  # type: ignore  # noqa: PGH003
         )
 
 
@@ -248,12 +413,12 @@ def test_filtering_system_with_invalid_datetime_format_kwarg(
         compiler.compile(
             RuleSchema(
                 **{  # noqa: PIE804
-                    "datetime__gt": {
-                        "key": "birthdate",
-                        "value": "06-01-2001",
-                    }
-                }  # type: ignore  # noqa: PGH003
-            ).model_dump()
+                    "name": "datetime__gt",
+                    "inverse": False,
+                    "args": [],
+                    "kwargs": {"key": "birthdate", "value": "06-01-2001"},
+                }
+            ).model_dump()  # type: ignore  # noqa: PGH003
         )
 
 
@@ -263,6 +428,11 @@ def test_filtering_system_without_processing_datetime(
     with pytest.raises(TypeError):
         compiler.compile(
             RuleSchema(
-                **{"datetime__ge": ["birthdate", "2001-06-01"]}  # type: ignore  # noqa: PGH003, PIE804
-            ).model_dump()
+                **{  # noqa: PIE804
+                    "name": "datetime__ge",
+                    "args": ["birthdate", "2001-06-01"],
+                    "kwargs": {},
+                    "inverse": False,
+                }
+            ).model_dump()  # type: ignore  # noqa: PGH003
         )({"birthdate": datetime(2005, 1, 1)})
