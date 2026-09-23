@@ -172,11 +172,11 @@ class ObjectRulesRegistry[T, R: ReturnType]:
     ) -> ObjectRuleFn[T, R, P]:
         rule_name = _process_rule_name(fn, name)
 
-        if hidden:
-            self._hidden.add(rule_name)
-
         if rule_name in self._rules:
             raise RuleAlreadyRegisteredError(rule_name)
+
+        if hidden:
+            self._hidden.add(rule_name)
 
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
@@ -364,11 +364,11 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
     ) -> SubscriptableRuleFn[T, K, R, P]:
         rule_name = _process_rule_name(fn, name)
 
-        if hidden:
-            self._hidden.add(rule_name)
-
         if rule_name in self._rules:
             raise RuleAlreadyRegisteredError(rule_name)
+
+        if hidden:
+            self._hidden.add(rule_name)
 
         @wraps(fn)
         def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
