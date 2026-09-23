@@ -94,6 +94,10 @@ def test_process_arguments(
     assert process_arguments(processors, *args, **kwargs) == expected
 
 
+def test_process_arguments_with_no_args_and_no_kwargs() -> None:
+    assert process_arguments((lambda value: value * 2, {})) == ((), {})
+
+
 def test_raises_process_argument_error(
     processors_tuple: tuple[ProcessFn, dict[str, ProcessFn]],
 ) -> None:

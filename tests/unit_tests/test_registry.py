@@ -123,6 +123,26 @@ def test_raising_error_when_using_hidden_rule(
         obj_registry["some_rule"]
 
 
+def test_obj_registry_duplicate_hidden_does_not_hide_existing_rule(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    """A failed duplicate registration must not have side effects on the existing rule."""
+
+    def original(_: User) -> bool:
+        return True
+
+    def conflicting(_: User) -> bool:
+        return False
+
+    obj_registry.register_rule(original, name="dup")
+
+    with pytest.raises(RuleAlreadyRegisteredError):
+        obj_registry.register_rule(conflicting, name="dup", hidden=True)
+
+    assert "dup" in obj_registry.rules
+    assert obj_registry["dup"] is not None
+
+
 def test_description_obj(
     obj_registry: ObjectRulesRegistry[User, bool],
 ) -> None:
@@ -165,6 +185,18 @@ def test_obj_registry_repr(obj_registry: ObjectRulesRegistry[User, bool]) -> Non
 def test_obj_registry_with_lambda(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
     with pytest.raises(ValueError, match="You must provide a name for the rule"):
         obj_registry.register_rule(lambda _: True)
+
+
+def test_obj_registry_empty_string_name_falls_back_to_function_name(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    """An explicit empty-string name is falsy, so it silently falls back to fn.__name__."""
+
+    def some_rule(user: User) -> bool: ...
+
+    obj_registry.register_rule(some_rule, name="")
+
+    assert "some_rule" in obj_registry.rules
 
 
 # -----------------------
@@ -285,6 +317,26 @@ def test_raising_error_when_using_hidden_rule_2(
 
     with pytest.raises(RuleDoesNotExistError, match="Rule 'some_rule' does not exist"):
         sub_registry["some_rule"]
+
+
+def test_sub_registry_duplicate_hidden_does_not_hide_existing_rule(
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
+) -> None:
+    """A failed duplicate registration must not have side effects on the existing rule."""
+
+    def original(_: dict[str, Any], __: str) -> bool:
+        return True
+
+    def conflicting(_: dict[str, Any], __: str) -> bool:
+        return False
+
+    sub_registry.register_rule(original, name="dup")
+
+    with pytest.raises(RuleAlreadyRegisteredError):
+        sub_registry.register_rule(conflicting, name="dup", hidden=True)
+
+    assert "dup" in sub_registry.rules
+    assert sub_registry["dup"] is not None
 
 
 def test_description(

@@ -98,6 +98,37 @@ def test_get_json_schema_for_empty_literal() -> None:
     assert get_json_schema(Literal[()]) == {"enum": []}
 
 
+def test_get_json_schema_for_boolean_literal_has_no_string_type() -> None:
+    assert get_json_schema(Literal[True, False]) == {"enum": [True, False]}
+
+
+def test_get_json_schema_for_nested_containers() -> None:
+
+    assert get_json_schema(list[list[int]]) == {
+        "type": "array",
+        "items": {"type": "array", "items": {"type": "integer"}},
+    }
+
+
+def test_get_json_schema_for_dict_with_non_string_key_ignores_key_type() -> None:
+    assert get_json_schema(dict[int, str]) == {
+        "type": "object",
+        "additionalProperties": {"type": "string"},
+    }
+
+
+def test_get_json_schema_for_empty_tuple_type() -> None:
+
+    assert get_json_schema(tuple[()]) == {"type": "array", "items": {}}
+
+
+def test_get_json_schema_for_heterogeneous_tuple_only_reflects_first_member() -> None:
+    assert get_json_schema(tuple[int, str]) == {
+        "type": "array",
+        "items": {"type": "integer"},
+    }
+
+
 class ExamplePayload(TypedDict):
     name: str
     age: int

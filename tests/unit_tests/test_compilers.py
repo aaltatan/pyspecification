@@ -266,3 +266,36 @@ def test_compiler_reports_invalid_non_dict_expression(
 ) -> None:
     with pytest.raises(TypeError, match=r"Invalid expression at \$\."):
         compiler.compile(expression)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("operator, expected", [("all", True), ("any", False)])
+def test_compiler_with_empty_expressions_returns_initial_predicate(
+    compiler: PredicateCompiler[User, bool],
+    operator: str,
+    expected: bool,  # noqa: FBT001
+) -> None:
+    """With no expressions, the wrapper's result is just the initial predicate untouched."""
+    predicate = compiler.compile({"operator": operator, "expressions": []})  # type: ignore[arg-type]
+
+    assert predicate(User(name="Abdullah", age=18, is_admin=True)) is expected
+
+
+def test_compiler_with_non_mapping_kwargs_raises_type_error_at_compile_time(
+    compiler: PredicateCompiler[User, bool],
+) -> None:
+    with pytest.raises(TypeError):
+        compiler.compile(
+            {"name": "is_admin", "args": [], "kwargs": ["not", "a", "mapping"], "inverse": False}  # type: ignore[arg-type]
+        )
+
+
+def test_compiler_with_non_sequence_args_defers_error_to_predicate_call(
+    compiler: PredicateCompiler[User, bool],
+) -> None:
+    """Args unpacking as keys of a dict succeeds at compile time but fails when called."""
+    predicate = compiler.compile(
+        {"name": "is_admin", "args": {"unexpected": 1}, "kwargs": {}, "inverse": False}  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(TypeError):
+        predicate(User(name="Abdullah", age=18, is_admin=True))

@@ -125,6 +125,21 @@ def test_raising_error_when_using_key_does_not_exists_in_dict() -> None:
         rule({"name": "Abdullah", "age": 18, "is_admin": True})
 
 
+@pytest.mark.parametrize("falsy_value", [False, 0, None, "", 0.0])
+def test_check_key_existence_distinguishes_falsy_value_from_missing_key(
+    falsy_value: Any,
+) -> None:
+    """check_key_existence must use membership, not truthiness, to detect a missing key."""
+
+    @subscriptable_rule(check_key_existence=True)
+    def is_true(obj: dict[str, Any], key: str) -> bool:
+        return obj[key] is True
+
+    rule = is_true("flag")
+
+    assert rule({"flag": falsy_value}) is False
+
+
 def test_raising_error_when_using_one_key_of_forbidden_keys() -> None:
 
     @subscriptable_rule(forbidden_keys=("some_value",))
@@ -183,6 +198,31 @@ def test_raising_error_when_using_idx_does_not_exists_in_list() -> None:
         match="Key '3' does not exist in the object of rule 'seq_istartswith'",
     ):
         rule(["Abdullah", 18, True])
+
+
+def test_negative_idx_within_bounds_is_valid_with_check_key_existence() -> None:
+    rule = seq_istartswith(-1, "admin")
+    assert rule(["Abdullah", 18, "Admin"]) is True
+
+
+def test_negative_idx_out_of_bounds_raises_with_check_key_existence() -> None:
+    rule = seq_istartswith(-1, "admin")
+
+    with pytest.raises(
+        RuleKeyDoesNotExistError,
+        match=r"Key '-1' does not exist in the object of rule 'seq_istartswith'",
+    ):
+        rule([])
+
+
+def test_negative_idx_beyond_bounds_raises_with_check_key_existence() -> None:
+    rule = seq_istartswith(-4, "admin")
+
+    with pytest.raises(
+        RuleKeyDoesNotExistError,
+        match=r"Key '-4' does not exist in the object of rule 'seq_istartswith'",
+    ):
+        rule(["Abdullah", 18, "Admin"])
 
 
 def test_raising_error_when_using_one_idx_of_forbidden_keys() -> None:

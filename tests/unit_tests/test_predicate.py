@@ -148,3 +148,43 @@ def test_raising_error_when_combine_bitwise_and_logical() -> None:
         )
 
     assert "Cannot combine predicates with different operators" in str(exc.value)
+
+
+def test_raising_error_when_combine_logical_and_bitwise_with_and() -> None:
+    with pytest.raises(ValueError) as exc:
+        _ = Predicate(lambda _: True, operator="logical") & Predicate(
+            lambda _: True, operator="bitwise"
+        )
+
+    assert "Cannot combine predicates with different operators" in str(exc.value)
+
+
+def test_double_negation_logical_returns_original_value() -> None:
+    is_admin: Predicate[User, bool] = Predicate(lambda user: user.is_admin, operator="logical")
+    double_negated = ~(~is_admin)
+
+    assert double_negated(User(name="Alice", age=20, is_admin=True)) is True
+    assert double_negated(User(name="Bob", age=20, is_admin=False)) is False
+
+
+def test_bitwise_invert_on_plain_bool_does_not_yield_a_bool() -> None:
+    """Bitwise '~' follows Python int semantics, not boolean negation, for plain bools.
+
+    Bitwise-operator predicates are meant for values with real &/|/~ overloads
+    (numpy/pandas boolean arrays, SQL column expressions, etc). Applying '~' to a
+    plain python bool returns int -1/-2 (both truthy), not the negated bool -
+    a common surprise when reusing bitwise rules that happen to return plain bools.
+    """
+    is_admin: Predicate[User, bool] = Predicate(lambda user: user.is_admin, operator="bitwise")
+    inverted = ~is_admin
+
+    admin_user = User(name="Alice", age=20, is_admin=True)
+    non_admin_user = User(name="Bob", age=20, is_admin=False)
+
+    assert inverted(admin_user) == -2
+    assert inverted(non_admin_user) == -1
+    assert inverted(admin_user) != True  # noqa: E712
+    assert inverted(non_admin_user) != False  # noqa: E712
+    # both are still truthy, so callers relying on truthiness (not equality) are unaffected
+    assert bool(inverted(admin_user)) is True
+    assert bool(inverted(non_admin_user)) is True
