@@ -168,7 +168,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
                         check_key_existence
                         and isinstance(obj, list)
                         and isinstance(key, int)
-                        and len(obj) <= key
+                        and not (-len(obj) <= key < len(obj))
                     ),
                     lambda: check_key_existence and isinstance(obj, dict) and key not in obj,
                 ]
