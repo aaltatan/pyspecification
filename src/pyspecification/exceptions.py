@@ -2,7 +2,11 @@ import re
 from collections.abc import Iterable
 
 
-class RuleDoesNotExistError(Exception):
+class PySpecificationError(Exception):
+    """Base class for all PySpecification exceptions."""
+
+
+class RuleDoesNotExistError(PySpecificationError):
     """Exception raised when a rule does not exist."""
 
     def __init__(self, name: str, available_rules: Iterable[str] | None = None) -> None:
@@ -14,21 +18,21 @@ class RuleDoesNotExistError(Exception):
         super().__init__(msg)
 
 
-class RuleAlreadyRegisteredError(Exception):
+class RuleAlreadyRegisteredError(PySpecificationError):
     """Exception raised when a rule is already registered in registry class."""
 
     def __init__(self, name: str) -> None:
         super().__init__(f"Rule '{name}' is already registered")
 
 
-class RuleKeyDoesNotExistError(Exception):
+class RuleKeyDoesNotExistError(PySpecificationError):
     """Exception raised when a key does not exist in the object of rule."""
 
     def __init__(self, key: str, rule_name: str) -> None:
         super().__init__(f"Key '{key}' does not exist in the object of rule '{rule_name}'")
 
 
-class ArgumentError(TypeError):
+class ArgumentError(PySpecificationError, TypeError):
     pass
 
 
