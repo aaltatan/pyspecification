@@ -51,9 +51,9 @@ This keeps your logic:
 - Subscriptable rules for dictionaries, lists, and generic lookup-based data
 - `Predicate` objects that support logical composition
 - Registry pattern for rule registration and lookup
-- Custom argument processors for coercion and normalization
+- Custom argument processors for coercion and normalization, validated when a rule is registered
 - `PredicateCompiler` for compiling structured rule dictionaries into executable predicates
-- JSON schema generation for rule arguments and return types
+- JSON schema generation for single rules and for whole compilable expressions
 - Support for both logical and bitwise operator modes
 - Hidden rules and custom naming for internal/private rule registration
 
@@ -476,7 +476,10 @@ This pattern is especially useful when you want:
 
 ## Custom processors
 
-Rules can apply argument processors to coerce values before evaluation.
+Rules can apply argument processors to coerce values before evaluation. This is
+most useful when rules come from JSON, where every value is a string, number,
+boolean, list, dict or null, and your rule functions expect richer types such as
+dates or decimals.
 
 ```python
 from datetime import datetime
@@ -487,7 +490,7 @@ from pyspecification import SubscriptableRulesRegistry
 rules = SubscriptableRulesRegistry[dict[str, object], str, bool](operator="logical")
 
 
-@rules.rule(processors=(lambda value: datetime.strptime(value, "%Y-%m-%d"), {}))
+@rules.rule(processors={"value": lambda value: datetime.strptime(value, "%Y-%m-%d")})
 def datetime__gt(obj: dict[str, object], key: str, value: datetime) -> bool:
     return obj[key] > value
 
@@ -496,27 +499,45 @@ predicate = rules["datetime__gt"]("birthdate", "2001-06-01")
 print(predicate({"birthdate": datetime(2005, 1, 1)}))  # True
 ```
 
-The processor tuple format is:
+The `processors` option accepts:
+
+- `None` (the default): arguments are passed through untouched.
+- a callable: applied to every argument, e.g. `processors=int`.
+- a mapping of parameter name to callable: applied to those arguments only,
+  e.g. `processors={"min_age": int}`. The key `...` (Ellipsis) means "every
+  argument not named here", e.g. `processors={"min_age": int, ...: str.strip}`.
+
+Processors are matched by parameter name, so they apply whether a value was
+passed positionally or by keyword. For `*args` the processor runs on each item,
+and for `**kwargs` each extra keyword name is looked up individually. Default
+values you did not pass are left as they are.
+
+The object under test and, for subscriptable rules, the `key` are not
+arguments: they are never processed and cannot be named in the mapping.
+
+Processors are validated when the rule is registered, so a typo fails
+immediately instead of silently never running:
 
 ```python
-(default_processor, named_processors_map)
+@rules.rule(processors={"valu": str})  # InvalidProcessorsError: unknown parameters ['valu']
+def string__eq(obj: dict[str, object], key: str, value: str) -> bool: ...
 ```
 
-For example:
+`InvalidProcessorsError` is raised when the option is not a callable or a
+mapping, when a mapping value is not callable, or when a key names no parameter
+of the rule (rules that accept `**kwargs` allow any key).
 
-```python
-processors = (
-    int,
-    {"value": str},
-)
+If a processor raises, the library raises `ProcessArgumentError` naming the
+parameter and value, with the original exception chained:
+
+```text
+Argument 'value' with value '06-01-2001' failed to process, time data '06-01-2001' does not match format '%Y-%m-%d'
 ```
 
-This means:
-
-- positional args are passed through `int`
-- keyword args with name `"value"` are passed through `str`
-
-If conversion fails, the library raises `ProcessArgumentError`.
+> **Upgrading from 2.x:** processors used to be a `(default_processor,
+> named_processors_map)` tuple. Pass a callable instead of the tuple for the
+> old "process everything" behavior, or a mapping for named parameters. The
+> old tuple form is now rejected with `InvalidProcessorsError`.
 
 ---
 
@@ -679,7 +700,17 @@ not match a predicate or wrapper shape, it raises `TypeError`.
 
 ## JSON schema generation
 
-`get_rule_json_schema` inspects a rule function and returns JSON-schema-like metadata for parameters and return value.
+The generated schemas describe the exact shape accepted by `PredicateCompiler`,
+so they can be handed to a form builder, a validator, or an LLM that writes
+rules as JSON.
+
+### One rule
+
+`get_rule_json_schema(name, rule)` returns the schema of one predicate
+dictionary. Positional parameters are described under `args` (via
+`prefixItems`), keyword-capable parameters under `kwargs`, and the rule's
+docstring becomes the description. The object under test is not part of the
+schema; for subscriptable rules the `key` is the first parameter.
 
 ```python
 from dataclasses import dataclass
@@ -695,19 +726,94 @@ class User:
 
 
 @object_rule()
-def name__istartswith(user: User, value: str) -> bool:
-    return user.name.lower().startswith(value.lower())
+def age__between(user: User, min_age: int, max_age: int = 120) -> bool:
+    """Whether the age is within a range."""
+    return min_age <= user.age <= max_age
 
 
-print(get_rule_json_schema(name__istartswith))
-# {'value': {'type': 'string'}, 'return': {'type': 'boolean'}}
+print(get_rule_json_schema("age__between", age__between))
+# {
+#     "type": "object",
+#     "properties": {
+#         "name": {"const": "age__between"},
+#         "args": {
+#             "type": "array",
+#             "prefixItems": [{"type": "integer"}, {"type": "integer", "default": 120}],
+#             "items": False,
+#         },
+#         "kwargs": {
+#             "type": "object",
+#             "properties": {
+#                 "min_age": {"type": "integer"},
+#                 "max_age": {"type": "integer", "default": 120},
+#             },
+#             "required": [],
+#             "additionalProperties": False,
+#         },
+#         "inverse": {"type": "boolean"},
+#     },
+#     "required": ["name", "args", "kwargs", "inverse"],
+#     "additionalProperties": False,
+#     "description": "Whether the age is within a range.",
+# }
 ```
+
+### A whole expression
+
+`get_expression_json_schema(rules)` returns the schema of everything
+`PredicateCompiler.compile` accepts: a predicate dictionary for each rule, or a
+nested `{"operator": "all" | "any", "expressions": [...]}` wrapper. Pass
+`registry.rules` (hidden rules are left out) or any name-to-rule mapping you
+give to the compiler.
+
+```python
+from pyspecification import ObjectRulesRegistry, get_expression_json_schema
+
+registry = ObjectRulesRegistry[User, bool](operator="logical")
+
+
+@registry.rule()
+def is_admin(user: User) -> bool:
+    return user.is_admin
+
+
+schema = get_expression_json_schema(registry.rules)
+print(schema["$schema"])  # https://json-schema.org/draft/2020-12/schema
+```
+
+### Supported types
+
+`get_json_schema(annotation)` maps Python annotations to JSON Schema. Unknown or
+unannotated types map to `{}`, which accepts any value.
+
+| Python annotation | JSON Schema |
+| --- | --- |
+| `str`, `int`, `float`, `bool`, `None` | `string`, `integer`, `number`, `boolean`, `null` |
+| `Decimal` | `number` |
+| `datetime`, `date`, `time`, `UUID` | `string` with `date-time`, `date`, `time`, `uuid` format |
+| `list[T]`, `set[T]`, `frozenset[T]`, `tuple[T, ...]` | `array` of `T` |
+| `dict[K, V]` | `object` with `V` as `additionalProperties` |
+| `Literal[...]`, `Enum` subclasses | `enum` of the values (plus `string` type when all are strings) |
+| `A \| B`, `Optional[A]` | `anyOf` |
+| `TypedDict` | `object` with `properties` and `required` (`Required`/`NotRequired` honored) |
+| `Annotated[T, ...]`, `type` aliases | the schema of `T` / the aliased type |
+
+Fixed-size heterogeneous tuples such as `tuple[int, str]` are described by their
+first member only. String annotations are evaluated when possible, and fall back
+to `{}` when they cannot be resolved. Defaults are included when they are plain
+JSON values.
+
+> **Upgrading from 2.x:** `get_rule_json_schema(rule)` used to return a flat
+> `{parameter: schema, "return": schema}` mapping. It now takes the rule name
+> too and returns the predicate dictionary schema shown above. `get_json_schema`
+> is now exported from the package root.
 
 This is useful for:
 
 - generating UIs for rule configuration
 - building admin tools and dashboards
-- describing rule inputs to other systems
+- validating rule payloads before compiling them
+- describing rule inputs to other systems and LLMs
 - documenting business rules programmatically
 
 ---
@@ -890,6 +996,7 @@ The library raises explicit exceptions for rule issues:
 - `UnexpectedKeywordArgumentError`
 - `TooManyArgumentsError`
 - `ProcessArgumentError`
+- `InvalidProcessorsError`
 
 `ArgumentError` is the base class for failures involving arguments passed to a
 rule. Its specialized exceptions describe the problem:
@@ -902,6 +1009,9 @@ rule. Its specialized exceptions describe the problem:
     the rule accepts.
 - `ProcessArgumentError` means an argument processor could not convert or
     otherwise process a value.
+
+`InvalidProcessorsError` (a `TypeError`) is raised at registration when the
+`processors` option is malformed or names a parameter the rule does not have.
 
 `RuleDoesNotExistError` includes the missing name and the available rule names,
 which is useful when rules are dynamically loaded. Malformed normalized
