@@ -85,7 +85,7 @@ def rules() -> SubscriptableRulesRegistry[dict[str, Any], str, bool]:
     def is_true(obj: dict[str, Any], key: str) -> bool:
         return obj[key] is True
 
-    @rules.rule(processors=(lambda value: datetime.strptime(value, "%Y-%m-%d"), {}))
+    @rules.rule(processors={"value": lambda value: datetime.strptime(value, "%Y-%m-%d")})
     def datetime__gt(obj: dict[str, Any], key: str, value: datetime) -> bool:
         return obj[key] > value
 
@@ -381,7 +381,10 @@ def test_filtering_system_with_invalid_rule_name(
 def test_filtering_system_with_invalid_datetime_format_arg(
     compiler: PredicateCompiler[dict[str, Any], bool],
 ) -> None:
-    with pytest.raises(ProcessArgumentError, match="Argument '06-01-2001' failed to process"):
+    with pytest.raises(
+        ProcessArgumentError,
+        match="Argument 'value' with value '06-01-2001' failed to process",
+    ):
         compiler.compile(
             {
                 "name": "datetime__gt",
@@ -397,7 +400,7 @@ def test_filtering_system_with_invalid_datetime_format_kwarg(
 ) -> None:
     with pytest.raises(
         ProcessArgumentError,
-        match="Keyword argument 'value' with value '06-01-2001' failed to process",
+        match="Argument 'value' with value '06-01-2001' failed to process",
     ):
         compiler.compile(
             {

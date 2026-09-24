@@ -1,12 +1,14 @@
 # ruff: noqa: PLR0913
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from functools import wraps
+from inspect import Signature, signature
+from types import EllipsisType
 from typing import Any, Concatenate
 
 from .exceptions import RuleAlreadyRegisteredError, RuleDoesNotExistError
 from .predicate import OperatorType, Predicate, ReturnType
-from .processors import DEFAULT_PROCESSORS, ProcessFn, process_arguments
-from .rules import object_rule, subscriptable_rule
+from .processors import process_arguments, processor_lookup
+from .rules import object_rule, subject_less_signature, subscriptable_rule
 from .validators import validate_python_vars_fn_naming_convention
 
 type ObjectRuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, P], R]
@@ -76,7 +78,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         main()
     ```
 
-    """
+    """  # noqa: E501
 
     def __init__(self, operator: OperatorType) -> None:
         self._rules: dict[str, ObjectRuleFn[T, R, ...]] = {}
@@ -103,7 +105,9 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         *,
         name: str | None = None,
         description: str | None = None,
-        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        processors: (
+            Callable[[Any], Any] | Mapping[str | EllipsisType, Callable[[Any], Any]] | None
+        ) = None,
         hidden: bool = False,
     ) -> Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]:
         """A decorator for registering an object-based rule.
@@ -111,7 +115,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         Args:
             name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
-            processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
+            processors (Callable | Mapping[str | EllipsisType, Callable], optional): How to transform arguments before the rule is built: a callable for every argument, or a mapping of parameter names to callables where the key `...` covers the remaining arguments. Defaults to None, which leaves them as-is.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
 
         Returns:
@@ -137,7 +141,9 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         *,
         name: str | None = None,
         description: str | None = None,
-        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        processors: (
+            Callable[[Any], Any] | Mapping[str | EllipsisType, Callable[[Any], Any]] | None
+        ) = None,
         hidden: bool = False,
     ) -> ObjectRuleFn[T, R, P]:
         """A method for registering an object-based rule.
@@ -146,7 +152,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             fn (ObjectRuleDefinitionFn[T, R, P]): The function to register.
             name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
-            processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
+            processors (Callable | Mapping[str | EllipsisType, Callable], optional): How to transform arguments before the rule is built: a callable for every argument, or a mapping of parameter names to callables where the key `...` covers the remaining arguments. Defaults to None, which leaves them as-is.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
 
         Returns:
@@ -167,7 +173,9 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         *,
         name: str | None,
         description: str | None,
-        processors: tuple[ProcessFn, dict[str, ProcessFn]],
+        processors: (
+            Callable[[Any], Any] | Mapping[str | EllipsisType, Callable[[Any], Any]] | None
+        ),
         hidden: bool,
     ) -> ObjectRuleFn[T, R, P]:
         rule_name = _process_rule_name(fn, name)
@@ -175,18 +183,21 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         if rule_name in self._rules:
             raise RuleAlreadyRegisteredError(rule_name)
 
+        process = _argument_processor(fn, processors, rule_name, skip=1)
+
         if hidden:
             self._hidden.add(rule_name)
 
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
+            processed_args, processed_kwargs = process(args, kwargs)
             return object_rule(
                 operator=self._operator,  # type: ignore  # noqa: PGH003
                 predicate_name=rule_name,
             )(fn)(*processed_args, **processed_kwargs)
 
         wrapper.__doc__ = description or fn.__doc__
+        wrapper.__signature__ = subject_less_signature(fn)  # type: ignore[attr-defined]
 
         self._rules[rule_name] = wrapper
 
@@ -279,7 +290,9 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None = None,
         description: str | None = None,
-        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        processors: (
+            Callable[[Any], Any] | Mapping[str | EllipsisType, Callable[[Any], Any]] | None
+        ) = None,
         hidden: bool = False,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
@@ -289,7 +302,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         Args:
             name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
-            processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
+            processors (Callable | Mapping[str | EllipsisType, Callable], optional): How to transform arguments before the rule is built: a callable for every argument, or a mapping of parameter names to callables where the key `...` covers the remaining arguments. Defaults to None, which leaves them as-is.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
             forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
@@ -321,7 +334,9 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None = None,
         description: str | None = None,
-        processors: tuple[ProcessFn, dict[str, ProcessFn]] = DEFAULT_PROCESSORS,
+        processors: (
+            Callable[[Any], Any] | Mapping[str | EllipsisType, Callable[[Any], Any]] | None
+        ) = None,
         hidden: bool = False,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
@@ -332,7 +347,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             fn (SubscriptableRuleDefinitionFn[T, K, R, P]): The function to register.
             name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
-            processors (tuple[ProcessFn, dict[str, ProcessFn]], optional): The processors to use for processing arguments and keywords. Defaults to DEFAULT_PROCESSORS.
+            processors (Callable | Mapping[str | EllipsisType, Callable], optional): How to transform arguments before the rule is built: a callable for every argument, or a mapping of parameter names to callables where the key `...` covers the remaining arguments. Defaults to None, which leaves them as-is.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
             forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
@@ -357,7 +372,9 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None,
         description: str | None,
-        processors: tuple[ProcessFn, dict[str, ProcessFn]],
+        processors: (
+            Callable[[Any], Any] | Mapping[str | EllipsisType, Callable[[Any], Any]] | None
+        ),
         hidden: bool,
         check_key_existence: bool | None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...],
@@ -367,13 +384,15 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         if rule_name in self._rules:
             raise RuleAlreadyRegisteredError(rule_name)
 
+        process = _argument_processor(fn, processors, rule_name, skip=2)
+
         if hidden:
             self._hidden.add(rule_name)
 
         @wraps(fn)
         def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
 
-            processed_args, processed_kwargs = process_arguments(processors, *args, **kwargs)
+            processed_args, processed_kwargs = process(args, kwargs)
 
             return subscriptable_rule(
                 operator=self._operator,  # type: ignore  # noqa: PGH003
@@ -389,10 +408,46 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             )(fn)(key, *processed_args, **processed_kwargs)
 
         wrapper.__doc__ = description or fn.__doc__
+        wrapper.__signature__ = subject_less_signature(fn)  # type: ignore[attr-defined]
 
         self._rules[rule_name] = wrapper
 
         return wrapper
+
+
+def _argument_processor(
+    fn: Callable[..., Any],
+    processors: (Callable[[Any], Any] | Mapping[str | EllipsisType, Callable[[Any], Any]] | None),
+    rule_name: str,
+    *,
+    skip: int,
+) -> Callable[[tuple[Any, ...], dict[str, Any]], tuple[tuple[Any, ...], dict[str, Any]]]:
+    """Validate `processors` against `fn` and return a function applying them to call arguments.
+
+    The first `skip` parameters of `fn` (the object under test, and the key of
+    subscriptable rules) are not arguments and are never processed.
+    """
+    if processors is None:
+        return lambda args, kwargs: (args, kwargs)
+
+    parameters = list(signature(fn).parameters.values())[skip:]
+    arguments_signature = Signature(parameters)
+    lookup = processor_lookup(processors, arguments_signature.parameters, rule_name)
+
+    def process(
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        try:
+            bound = arguments_signature.bind(*args, **kwargs)
+        except TypeError:
+            # wrong arity: leave it to the rule call, which reports it with the usual errors
+            return args, kwargs
+
+        processed = process_arguments(lookup, bound)
+        return processed.args, processed.kwargs
+
+    return process
 
 
 def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:

@@ -1,12 +1,18 @@
 from dataclasses import dataclass
+from inspect import signature
 from typing import Any
 
 import pytest
 from pyspecification import (
+    InvalidProcessorsError,
+    MissingArgumentError,
     ObjectRulesRegistry,
+    ProcessArgumentError,
     RuleAlreadyRegisteredError,
     RuleDoesNotExistError,
     SubscriptableRulesRegistry,
+    TooManyArgumentsError,
+    UnexpectedKeywordArgumentError,
 )
 from pyspecification.exceptions import RuleKeyDoesNotExistError
 
@@ -101,7 +107,7 @@ def test_obj_registry_processors(obj_registry: ObjectRulesRegistry[User, bool]) 
     def is_age(user: User, age: int) -> bool:
         return user.age == age
 
-    obj_registry.register_rule(is_age, processors=(int, {"s": str}))
+    obj_registry.register_rule(is_age, processors=int)
     rule_fn = obj_registry["is_age"]
 
     predicate = rule_fn("20")
@@ -281,7 +287,7 @@ def test_sub_registry_processors(
     def is_age(obj: dict[str, Any], key: str, age: int) -> bool:
         return obj[key] == age
 
-    sub_registry.register_rule(is_age, processors=(int, {"s": str}))
+    sub_registry.register_rule(is_age, processors=int)
     rule_fn = sub_registry["is_age"]
 
     predicate = rule_fn("age", "20")
@@ -360,3 +366,175 @@ def test_description(
     assert some_rule_2.__doc__ == "Do Some Work."
     assert some_rule_3.__doc__ is None
     assert some_rule_4.__doc__ == "This is overridden description 2"
+
+
+# -----------------------
+# processors
+# -----------------------
+
+
+def test_obj_registry_processors_mapping_applies_by_name_for_positional_and_keyword(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(processors={"min_age": int, "max_age": int})
+    def age__between(user: User, min_age: int, max_age: int) -> bool:
+        return min_age <= user.age <= max_age
+
+    user = User(name="Test", age=20)
+
+    assert age__between("18", "30")(user) is True
+    assert age__between("18", max_age="19")(user) is False
+    assert age__between(min_age="21", max_age="30")(user) is False
+
+
+def test_obj_registry_processors_ellipsis_covers_remaining_parameters(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(processors={"age": int, ...: str.strip})
+    def matches(user: User, name: str, age: int) -> bool:
+        return user.name == name and user.age == age
+
+    assert matches("  Test ", "20")(User(name="Test", age=20)) is True
+
+
+def test_obj_registry_processors_leave_unnamed_parameters_untouched(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(processors={"age": int})
+    def matches(user: User, name: str, age: int) -> bool:
+        return user.name == name and user.age == age
+
+    assert matches(" Test", "20")(User(name="Test", age=20)) is False
+
+
+def test_obj_registry_processors_apply_to_var_positional_and_var_keyword(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(processors=int)
+    def any_age_of(user: User, *ages: int, **named_ages: int) -> bool:
+        return user.age in (*ages, *named_ages.values())
+
+    assert any_age_of("1", "20")(User(name="Test", age=20)) is True
+    assert any_age_of(a="20")(User(name="Test", age=20)) is True
+    assert any_age_of("1", a="2")(User(name="Test", age=20)) is False
+
+
+def test_obj_registry_processors_do_not_apply_to_defaults(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(processors=int)
+    def older_than(user: User, age: int = 5) -> bool:
+        return user.age > age
+
+    assert older_than()(User(name="Test", age=6)) is True
+
+
+def test_obj_registry_processors_unknown_parameter_fails_at_registration(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    def older_than(user: User, age: int) -> bool:
+        return user.age > age
+
+    with pytest.raises(InvalidProcessorsError, match=r"unknown parameters \['agee'\]"):
+        obj_registry.register_rule(older_than, processors={"agee": int})
+
+    assert "older_than" not in obj_registry.rules
+
+
+def test_obj_registry_processors_naming_the_object_parameter_is_rejected(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    def older_than(user: User, age: int) -> bool:
+        return user.age > age
+
+    with pytest.raises(InvalidProcessorsError, match="unknown parameters"):
+        obj_registry.register_rule(older_than, processors={"user": int})
+
+
+@pytest.mark.parametrize("processors", [5, "int", (int, {})])
+def test_obj_registry_processors_of_wrong_type_fail_at_registration(
+    obj_registry: ObjectRulesRegistry[User, bool],
+    processors: Any,
+) -> None:
+    def older_than(user: User, age: int) -> bool:
+        return user.age > age
+
+    with pytest.raises(InvalidProcessorsError, match="must be a callable or a mapping"):
+        obj_registry.register_rule(older_than, processors=processors)
+
+
+def test_obj_registry_invalid_processors_do_not_hide_or_register_the_rule(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    def older_than(user: User, age: int) -> bool:
+        return user.age > age
+
+    with pytest.raises(InvalidProcessorsError):
+        obj_registry.register_rule(older_than, processors={"agee": int}, hidden=True)
+
+    obj_registry.register_rule(older_than)
+
+    assert "older_than" in obj_registry.rules
+
+
+def test_obj_registry_processors_failure_raises_process_argument_error(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(processors={"age": int})
+    def older_than(user: User, age: int) -> bool:
+        return user.age > age
+
+    with pytest.raises(ProcessArgumentError, match="Argument 'age' with value 'abc'"):
+        older_than("abc")
+
+
+def test_obj_registry_processors_do_not_mask_arity_errors(
+    obj_registry: ObjectRulesRegistry[User, bool],
+) -> None:
+    @obj_registry.rule(processors=int)
+    def older_than(user: User, age: int) -> bool:
+        return user.age > age
+
+    with pytest.raises(MissingArgumentError):
+        older_than()(User(name="Test", age=20))
+
+    with pytest.raises(TooManyArgumentsError):
+        older_than("1", "2")(User(name="Test", age=20))
+
+    with pytest.raises(UnexpectedKeywordArgumentError):
+        older_than(age="1", other="2")(User(name="Test", age=20))
+
+
+def test_sub_registry_processors_never_process_the_key(
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
+) -> None:
+    @sub_registry.rule(processors=int)
+    def is_age(obj: dict[str, Any], key: str, age: int) -> bool:
+        return obj[key] == age
+
+    assert is_age("age", "20")({"age": 20}) is True
+    assert is_age(key="age", age="20")({"age": 20}) is True
+
+
+def test_sub_registry_processors_naming_the_key_is_rejected(
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
+) -> None:
+    def is_age(obj: dict[str, Any], key: str, age: int) -> bool:
+        return obj[key] == age
+
+    with pytest.raises(InvalidProcessorsError, match="unknown parameters"):
+        sub_registry.register_rule(is_age, processors={"key": str})
+
+
+def test_registered_rule_signature_excludes_the_object_parameter(
+    obj_registry: ObjectRulesRegistry[User, bool],
+    sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
+) -> None:
+    @obj_registry.rule()
+    def older_than(user: User, age: int) -> bool: ...
+
+    @sub_registry.rule()
+    def is_age(obj: dict[str, Any], key: str, age: int) -> bool: ...
+
+    assert list(signature(older_than).parameters) == ["age"]
+    assert list(signature(is_age).parameters) == ["key", "age"]

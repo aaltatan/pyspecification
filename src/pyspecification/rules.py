@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from functools import wraps
+from inspect import Signature, signature
 from typing import Any, Concatenate
 
 from .exceptions import (
@@ -76,7 +77,7 @@ def object_rule[T, R: ReturnType, **P](
         main()
     ```
 
-    """  # noqa: D401
+    """  # noqa: D401, E501
 
     def decorator(
         fn: Callable[Concatenate[T, P], R],
@@ -93,6 +94,8 @@ def object_rule[T, R: ReturnType, **P](
                     raise
 
             return Predicate(inner, operator=operator, name=predicate_name)
+
+        wrapper.__signature__ = subject_less_signature(fn)  # type: ignore[attr-defined]
 
         return wrapper
 
@@ -184,9 +187,17 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
             return Predicate(inner, operator=operator, name=predicate_name)
 
+        wrapper.__signature__ = subject_less_signature(fn)  # type: ignore[attr-defined]
+
         return wrapper
 
     return decorator
+
+
+def subject_less_signature(fn: Callable[..., Any]) -> Signature:
+    """Return the signature of `fn` without its first parameter, the object under test."""
+    fn_signature = signature(fn)
+    return fn_signature.replace(parameters=list(fn_signature.parameters.values())[1:])
 
 
 def _raise_appropriate_type_error(e: TypeError, fn: Callable[..., Any]) -> None:

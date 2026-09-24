@@ -76,3 +76,7 @@ def is_positional_only_argument_exception(e: TypeError) -> bool:
 
 class ProcessArgumentError(ArgumentError):
     """Exception raised when a process argument fails in registry class."""
+
+
+class InvalidProcessorsError(PySpecificationError, TypeError):
+    """Exception raised when the `processors` option of a rule is malformed."""

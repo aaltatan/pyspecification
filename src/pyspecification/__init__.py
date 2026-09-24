@@ -7,6 +7,7 @@ This project was inspired by the work and ideas shared by [ArjanCodes](https://g
 from .compilers import ExpressionWrapperDict, PredicateCompiler, PredicateDict
 from .exceptions import (
     ArgumentError,
+    InvalidProcessorsError,
     MissingArgumentError,
     PositionalOnlyArgumentError,
     ProcessArgumentError,
@@ -16,7 +17,7 @@ from .exceptions import (
     TooManyArgumentsError,
     UnexpectedKeywordArgumentError,
 )
-from .json_schema import get_rule_json_schema
+from .json_schema import get_expression_json_schema, get_json_schema, get_rule_json_schema
 from .predicate import OperatorType, Predicate
 from .registry import ObjectRulesRegistry, SubscriptableRulesRegistry
 from .rules import object_rule, subscriptable_rule
@@ -24,6 +25,7 @@ from .rules import object_rule, subscriptable_rule
 __all__ = [
     "ArgumentError",
     "ExpressionWrapperDict",
+    "InvalidProcessorsError",
     "MissingArgumentError",
     "ObjectRulesRegistry",
     "OperatorType",
@@ -38,6 +40,8 @@ __all__ = [
     "SubscriptableRulesRegistry",
     "TooManyArgumentsError",
     "UnexpectedKeywordArgumentError",
+    "get_expression_json_schema",
+    "get_json_schema",
     "get_rule_json_schema",
     "object_rule",
     "subscriptable_rule",
