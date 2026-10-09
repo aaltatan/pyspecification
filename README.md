@@ -51,7 +51,8 @@ This keeps your logic:
 - Subscriptable rules for dictionaries, lists, and generic lookup-based data
 - `Predicate` objects that support logical composition
 - Registry pattern for rule registration and lookup
-- Custom argument processors for coercion and normalization, validated when a rule is registered
+- `Parse` markers that coerce and normalize raw arguments (strings from JSON or forms) into the objects a rule wants
+- Argument mistakes and failing parsers reported while a rule is built, before anything is evaluated
 - `PredicateCompiler` for compiling structured rule dictionaries into executable predicates
 - JSON schema generation for single rules and for whole compilable expressions
 - Support for both logical and bitwise operator modes
@@ -474,24 +475,28 @@ This pattern is especially useful when you want:
 
 ---
 
-## Custom processors
+## Parsing arguments with `Parse`
 
-Rules can apply argument processors to coerce values before evaluation. This is
-most useful when rules come from JSON, where every value is a string, number,
-boolean, list, dict or null, and your rule functions expect richer types such as
-dates or decimals.
+Rules often come from JSON or a web form, where every value is a string, number,
+boolean, list, dict or null, while your rule functions want dates, decimals,
+enums, clean text or loaded data. Mark a parameter with `Parse(fn)` inside
+`Annotated`, and `fn` is applied to the value when the rule is built:
 
 ```python
 from datetime import datetime
+from typing import Annotated
 
-from pyspecification import SubscriptableRulesRegistry
-
+from pyspecification import Parse, SubscriptableRulesRegistry
 
 rules = SubscriptableRulesRegistry[dict[str, object], str, bool](operator="logical")
 
 
-@rules.rule(processors={"value": lambda value: datetime.strptime(value, "%Y-%m-%d")})
-def datetime__gt(obj: dict[str, object], key: str, value: datetime) -> bool:
+def parse_date(text: str) -> datetime:
+    return datetime.strptime(text, "%Y-%m-%d")
+
+
+@rules.rule()
+def datetime__gt(obj: dict[str, object], key: str, value: Annotated[datetime, Parse(parse_date)]) -> bool:
     return obj[key] > value
 
 
@@ -499,45 +504,67 @@ predicate = rules["datetime__gt"]("birthdate", "2001-06-01")
 print(predicate({"birthdate": datetime(2005, 1, 1)}))  # True
 ```
 
-The `processors` option accepts:
+`Parse` works on `object_rule` and `subscriptable_rule` directly as well as
+through the registries. A few things worth knowing:
 
-- `None` (the default): arguments are passed through untouched.
-- a callable: applied to every argument, e.g. `processors=int`.
-- a mapping of parameter name to callable: applied to those arguments only,
-  e.g. `processors={"min_age": int}`. The key `...` (Ellipsis) means "every
-  argument not named here", e.g. `processors={"min_age": int, ...: str.strip}`.
+- Name a parsed type once with a `type` alias and reuse it in many rules, and
+  chain several markers (they run left to right):
 
-Processors are matched by parameter name, so they apply whether a value was
-passed positionally or by keyword. For `*args` the processor runs on each item,
-and for `**kwargs` each extra keyword name is looked up individually. Default
-values you did not pass are left as they are.
+  ```python
+  type Text = Annotated[str, Parse(str.strip), Parse(str.lower)]
+  type Money = Annotated[Decimal, Parse(Decimal)]
+  ```
 
-The object under test and, for subscriptable rules, the `key` are not
-arguments: they are never processed and cannot be named in the mapping.
+- A marker applies whether the value was passed positionally or by keyword. On
+  `*args` it runs on each item, and on `**kwargs` on each value.
+- Parsing happens once, when the rule is built, so a bad value fails before the
+  predicate ever runs. Default values you did not pass are never parsed.
+- The parser may take a different input than the rule: `Annotated[frozenset[str],
+  Parse(load_names)]` lets the JSON send a file path while the rule receives the
+  loaded names. The JSON schema describes what the JSON must send (the parser's
+  first parameter annotation), see below.
+- The object under test and, for subscriptable rules, the key are not
+  arguments: a marker on them raises `InvalidParserError`.
 
-Processors are validated when the rule is registered, so a typo fails
-immediately instead of silently never running:
-
-```python
-@rules.rule(processors={"valu": str})  # InvalidProcessorsError: unknown parameters ['valu']
-def string__eq(obj: dict[str, object], key: str, value: str) -> bool: ...
-```
-
-`InvalidProcessorsError` is raised when the option is not a callable or a
-mapping, when a mapping value is not callable, or when a key names no parameter
-of the rule (rules that accept `**kwargs` allow any key).
-
-If a processor raises, the library raises `ProcessArgumentError` naming the
-parameter and value, with the original exception chained:
+If a parser raises, the library raises `ParseArgumentError` naming the argument
+and value, with the original exception chained:
 
 ```text
-Argument 'value' with value '06-01-2001' failed to process, time data '06-01-2001' does not match format '%Y-%m-%d'
+Argument 'value' with value '06-01-2001' failed to parse, time data '06-01-2001' does not match format '%Y-%m-%d'
 ```
 
-> **Upgrading from 2.x:** processors used to be a `(default_processor,
-> named_processors_map)` tuple. Pass a callable instead of the tuple for the
-> old "process everything" behavior, or a mapping for named parameters. The
-> old tuple form is now rejected with `InvalidProcessorsError`.
+`InvalidParserError` (a `TypeError`) is raised as soon as the rule is defined
+when a `Parse` is not callable, is placed on the object under test or the key, or
+is written as a default value instead of inside `Annotated`.
+
+### Argument errors
+
+Arguments are bound to the rule signature as soon as the rule is called, so
+mistakes surface while a predicate is being built (including by
+`PredicateCompiler.compile`), not when it is evaluated. They are reported in the
+order Python reports them for a call: keywords that cannot be passed by name,
+surplus or repeated arguments, then missing ones.
+
+| Mistake | Exception |
+| --- | --- |
+| a required argument is missing | `MissingArgumentError` |
+| too many positional arguments | `TooManyArgumentsError` |
+| a keyword the rule does not declare | `UnexpectedKeywordArgumentError` |
+| a value given both positionally and by keyword | `MultipleValuesArgumentError` |
+| a positional-only parameter passed by keyword | `PositionalOnlyArgumentError` |
+
+A `TypeError` raised from inside your rule function is yours and is never
+reclassified. A function that does not accept the object under test (and, for
+subscriptable rules, the key) positionally raises `InvalidRuleError`.
+
+> **Upgrading from 3.x:** the `processors=` option of `rule()` and
+> `register_rule()` is gone. Replace `processors=int` by annotating the
+> parameters (`value: Annotated[int, Parse(int)]`), and a mapping such as
+> `processors={"age": int}` by marking just `age`. `ProcessArgumentError` is now
+> `ParseArgumentError` and `InvalidProcessorsError` is now `InvalidParserError`.
+> Argument errors are raised when a rule is built instead of when its predicate is
+> called, and a keyword-passed positional-only parameter (such as `key=` for a
+> rule declared `key, value, /`) is now a `PositionalOnlyArgumentError`.
 
 ---
 
@@ -803,6 +830,11 @@ first member only. String annotations are evaluated when possible, and fall back
 to `{}` when they cannot be resolved. Defaults are included when they are plain
 JSON values.
 
+A parameter marked with `Parse` is described by what its parser accepts, since
+that is what the JSON has to send: with `Annotated[frozenset[str], Parse(load_names)]`
+and `def load_names(path: str)`, the schema says `string`. A parser without a
+parameter annotation (such as `int` or `str.strip`) falls back to the annotated type.
+
 > **Upgrading from 2.x:** `get_rule_json_schema(rule)` used to return a flat
 > `{parameter: schema, "return": schema}` mapping. It now takes the rule name
 > too and returns the predicate dictionary schema shown above. `get_json_schema`
@@ -995,8 +1027,11 @@ The library raises explicit exceptions for rule issues:
 - `MissingArgumentError`
 - `UnexpectedKeywordArgumentError`
 - `TooManyArgumentsError`
-- `ProcessArgumentError`
-- `InvalidProcessorsError`
+- `MultipleValuesArgumentError`
+- `PositionalOnlyArgumentError`
+- `ParseArgumentError`
+- `InvalidParserError`
+- `InvalidRuleError`
 
 `ArgumentError` is the base class for failures involving arguments passed to a
 rule. Its specialized exceptions describe the problem:
@@ -1007,11 +1042,17 @@ rule. Its specialized exceptions describe the problem:
     rule's signature.
 - `TooManyArgumentsError` means more positional arguments were provided than
     the rule accepts.
-- `ProcessArgumentError` means an argument processor could not convert or
-    otherwise process a value.
+- `MultipleValuesArgumentError` means a value was given both positionally and
+    by keyword.
+- `PositionalOnlyArgumentError` means a positional-only parameter was passed by
+    keyword.
+- `ParseArgumentError` means a `Parse` function could not convert a value.
 
-`InvalidProcessorsError` (a `TypeError`) is raised at registration when the
-`processors` option is malformed or names a parameter the rule does not have.
+`InvalidParserError` and `InvalidRuleError` (both `TypeError`s) are raised when a
+rule is defined: a misplaced or non-callable `Parse`, or a function that does not
+accept the object under test (and key) positionally. Every exception derives from
+`PySpecificationError`, and exceptions raised while compiling carry a note with
+the JSON path of the offending expression, e.g. `at $.expressions[1]`.
 
 `RuleDoesNotExistError` includes the missing name and the available rule names,
 which is useful when rules are dynamically loaded. Malformed normalized
