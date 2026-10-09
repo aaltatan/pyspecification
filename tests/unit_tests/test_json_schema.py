@@ -10,6 +10,7 @@ import pytest
 from pyspecification import (
     ExpressionWrapperDict,
     ObjectRulesRegistry,
+    Parse,
     Predicate,
     PredicateCompiler,
     PredicateDict,
@@ -556,3 +557,72 @@ def test_wrapper_typed_dict_schema_has_all_fields() -> None:
 
     assert schema["type"] == "object"
     assert set(schema["properties"]) == {"operator", "expressions"}
+
+
+# -----------------------
+# parse
+# -----------------------
+
+
+def load_names(path: str) -> frozenset[str]:
+    return frozenset(path)
+
+
+def untyped_loader(path):  # type: ignore[no-untyped-def]  # noqa: ANN001, ANN201
+    return path
+
+
+type Names = Annotated[frozenset[str], Parse(load_names)]
+type Money = Annotated[Decimal, Parse(Decimal)]
+
+
+@pytest.mark.parametrize(
+    ("annotation", "expected"),
+    [
+        (Annotated[frozenset[str], Parse(load_names)], {"type": "string"}),
+        (Names, {"type": "string"}),
+        (Annotated[Decimal, Parse(Decimal)], {"type": "number"}),
+        (Money, {"type": "number"}),
+        (Annotated[int, Parse(str.strip), Parse(int)], {"type": "integer"}),
+        (Annotated[list[str], Parse(untyped_loader)], {"type": "array", "items": {"type": "string"}}),
+        (Annotated[int, Parse(lambda value: value)], {"type": "integer"}),
+        (Annotated[Names, "metadata"], {"type": "string"}),
+        (list[Names], {"type": "array", "items": {"type": "string"}}),
+        (Names | None, {"anyOf": [{"type": "string"}, {"type": "null"}]}),
+    ],
+)
+def test_get_json_schema_describes_what_the_parser_accepts(
+    annotation: Any, expected: dict[str, Any]
+) -> None:
+
+    assert get_json_schema(annotation) == expected
+
+
+def test_get_json_schema_of_typed_dict_field_with_parse() -> None:
+    class Payload(TypedDict):
+        names: Names
+        plain: int
+
+    assert get_json_schema(Payload)["properties"] == {
+        "names": {"type": "string"},
+        "plain": {"type": "integer"},
+    }
+
+
+def test_get_rule_json_schema_describes_the_unparsed_arguments() -> None:
+    @object_rule()
+    def exclude(
+        user: User,
+        names: Names,
+        price: Money,
+        limit: Annotated[int, Parse(int)] = 3,
+    ) -> bool:
+        return True
+
+    schema = get_rule_json_schema("exclude", exclude)
+
+    assert args_of(schema)["prefixItems"] == [
+        {"type": "string"},
+        {"type": "number"},
+        {"type": "integer", "default": 3},
+    ]
