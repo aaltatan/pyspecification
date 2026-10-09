@@ -2,7 +2,18 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from pyspecification import Predicate, RuleKeyDoesNotExistError, object_rule, subscriptable_rule
+from pyspecification import (
+    ArgumentError,
+    MissingArgumentError,
+    MultipleValuesArgumentError,
+    PositionalOnlyArgumentError,
+    Predicate,
+    RuleKeyDoesNotExistError,
+    TooManyArgumentsError,
+    UnexpectedKeywordArgumentError,
+    object_rule,
+    subscriptable_rule,
+)
 
 # -----------------------
 # obj rule
@@ -237,3 +248,83 @@ def test_raising_error_when_using_one_idx_of_forbidden_keys() -> None:
         match="Key '3' does not exist in the object of rule 'some_rule'",
     ):
         rule(["Abdullah", 18, True])
+
+
+# -----------------------
+# argument errors
+# -----------------------
+
+
+def test_argument_errors_are_raised_when_the_rule_is_built_not_when_it_runs() -> None:
+    with pytest.raises(MissingArgumentError, match="rule 'age__between'"):
+        age__between(18)
+
+    with pytest.raises(TooManyArgumentsError):
+        age__between(1, 2, 3)
+
+    with pytest.raises(UnexpectedKeywordArgumentError):
+        age__between(1, 2, other=3)
+
+    with pytest.raises(MultipleValuesArgumentError):
+        age__between(1, min_age=2)
+
+
+def test_unexpected_keyword_is_reported_before_missing_argument() -> None:
+    with pytest.raises(UnexpectedKeywordArgumentError, match="'max_agee'"):
+        age__between(min_age=1, max_agee=2)
+
+
+def test_positional_only_argument_passed_by_keyword() -> None:
+    @subscriptable_rule()
+    def string__startswith(obj: dict[str, Any], key: str, value: str, /) -> bool:
+        return obj[key].startswith(value)
+
+    with pytest.raises(PositionalOnlyArgumentError, match="rule 'string__startswith'"):
+        string__startswith("name", value="a")
+
+    @object_rule()
+    def named(obj: object, value: str, /, **extras: str) -> bool:
+        return True
+
+    assert named("a", value="kept in extras")(object()) is True
+
+
+def test_type_error_raised_inside_the_rule_body_is_not_reclassified() -> None:
+    @object_rule()
+    def explode(user: User) -> bool:
+        return "text" + 1  # type: ignore[operator]
+
+    with pytest.raises(TypeError) as error:
+        explode()(User(name="x", age=1, is_admin=True))
+
+    assert not isinstance(error.value, ArgumentError)
+
+
+def test_subscriptable_rule_binds_the_key_by_its_declared_name() -> None:
+    @subscriptable_rule()
+    def has_value(obj: dict[str, Any], field: str, value: Any) -> bool:
+        return obj[field] == value
+
+    assert has_value(field="a", value=1)({"a": 1}) is True
+    assert has_value("a", 1)({"a": 1}) is True
+
+    with pytest.raises(UnexpectedKeywordArgumentError):
+        has_value(key="a", value=1)
+
+
+def test_subscriptable_rule_reports_forbidden_key_given_by_keyword() -> None:
+    @subscriptable_rule(forbidden_keys=("secret",))
+    def has_value(obj: dict[str, Any], field: str, value: Any) -> bool:
+        return obj[field] == value
+
+    with pytest.raises(RuleKeyDoesNotExistError, match="Key 'secret'"):
+        has_value(field="secret", value=1)({"secret": 1})
+
+
+def test_rule_name_in_errors_prefers_the_predicate_name() -> None:
+    @object_rule(predicate_name="custom_name")
+    def older_than(user: User, age: int) -> bool:
+        return user.age > age
+
+    with pytest.raises(MissingArgumentError, match="rule 'custom_name'"):
+        older_than()

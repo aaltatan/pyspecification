@@ -7,10 +7,13 @@ This project was inspired by the work and ideas shared by [ArjanCodes](https://g
 from .compilers import ExpressionWrapperDict, PredicateCompiler, PredicateDict
 from .exceptions import (
     ArgumentError,
-    InvalidProcessorsError,
+    InvalidParserError,
+    InvalidRuleError,
     MissingArgumentError,
+    MultipleValuesArgumentError,
+    ParseArgumentError,
     PositionalOnlyArgumentError,
-    ProcessArgumentError,
+    PySpecificationError,
     RuleAlreadyRegisteredError,
     RuleDoesNotExistError,
     RuleKeyDoesNotExistError,
@@ -18,6 +21,7 @@ from .exceptions import (
     UnexpectedKeywordArgumentError,
 )
 from .json_schema import get_expression_json_schema, get_json_schema, get_rule_json_schema
+from .parsers import Parse
 from .predicate import OperatorType, Predicate
 from .registry import ObjectRulesRegistry, SubscriptableRulesRegistry
 from .rules import object_rule, subscriptable_rule
@@ -25,15 +29,19 @@ from .rules import object_rule, subscriptable_rule
 __all__ = [
     "ArgumentError",
     "ExpressionWrapperDict",
-    "InvalidProcessorsError",
+    "InvalidParserError",
+    "InvalidRuleError",
     "MissingArgumentError",
+    "MultipleValuesArgumentError",
     "ObjectRulesRegistry",
     "OperatorType",
+    "Parse",
+    "ParseArgumentError",
     "PositionalOnlyArgumentError",
     "Predicate",
     "PredicateCompiler",
     "PredicateDict",
-    "ProcessArgumentError",
+    "PySpecificationError",
     "RuleAlreadyRegisteredError",
     "RuleDoesNotExistError",
     "RuleKeyDoesNotExistError",

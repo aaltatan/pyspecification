@@ -1,8 +1,17 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Annotated, Any
 
 import pytest
-from pyspecification import Predicate, PredicateCompiler, RuleDoesNotExistError, object_rule
+from pyspecification import (
+    MissingArgumentError,
+    Parse,
+    ParseArgumentError,
+    Predicate,
+    PredicateCompiler,
+    RuleDoesNotExistError,
+    TooManyArgumentsError,
+    object_rule,
+)
 
 from tests.models import CompilerGetter
 
@@ -289,13 +298,72 @@ def test_compiler_with_non_mapping_kwargs_raises_type_error_at_compile_time(
         )
 
 
-def test_compiler_with_non_sequence_args_defers_error_to_predicate_call(
+def test_compiler_with_non_sequence_args_fails_while_compiling(
     compiler: PredicateCompiler[User, bool],
 ) -> None:
-    """Args unpacking as keys of a dict succeeds at compile time but fails when called."""
-    predicate = compiler.compile(
-        {"name": "is_admin", "args": {"unexpected": 1}, "kwargs": {}, "inverse": False}  # type: ignore[arg-type]
+    """Args unpack as the keys of a dict, so a rule taking none gets a surplus argument."""
+    with pytest.raises(TooManyArgumentsError, match="rule 'is_admin'"):
+        compiler.compile(
+            {"name": "is_admin", "args": {"unexpected": 1}, "kwargs": {}, "inverse": False}  # type: ignore[arg-type]
+        )
+
+
+def test_compiler_errors_carry_the_json_path_of_the_expression(
+    compiler: PredicateCompiler[User, bool],
+) -> None:
+    with pytest.raises(MissingArgumentError) as missing:
+        compiler.compile(
+            {
+                "operator": "all",
+                "expressions": [
+                    {"name": "is_admin", "args": [], "kwargs": {}, "inverse": False},
+                    {"name": "age__between", "args": [18], "kwargs": {}, "inverse": False},
+                ],
+            }  # type: ignore[arg-type]
+        )
+
+    assert missing.value.__notes__ == ["at $.expressions[1]"]
+
+    with pytest.raises(RuleDoesNotExistError) as unknown:
+        compiler.compile({"name": "nope", "args": [], "kwargs": {}, "inverse": False})  # type: ignore[arg-type]
+
+    assert unknown.value.__notes__ == ["at $"]
+
+
+def test_compiler_parse_failure_is_reported_with_its_path() -> None:
+    @object_rule()
+    def age__gt(user: User, age: Annotated[int, Parse(int)]) -> bool:
+        return user.age > age
+
+    compiler = PredicateCompiler[User, bool](
+        {"age__gt": age__gt},
+        lambda schema: Predicate(lambda _: schema["operator"] == "all", operator="logical"),
     )
 
-    with pytest.raises(TypeError):
-        predicate(User(name="Abdullah", age=18, is_admin=True))
+    with pytest.raises(ParseArgumentError, match="Argument 'age' with value 'old'") as error:
+        compiler.compile(
+            {
+                "operator": "any",
+                "expressions": [
+                    {"name": "age__gt", "args": ["18"], "kwargs": {}, "inverse": False},
+                    {"name": "age__gt", "args": ["old"], "kwargs": {}, "inverse": False},
+                ],
+            }  # type: ignore[arg-type]
+        )
+
+    assert error.value.__notes__ == ["at $.expressions[1]"]
+
+
+def test_compiler_parses_arguments_before_evaluating_anything() -> None:
+    @object_rule()
+    def age__gt(user: User, age: Annotated[int, Parse(int)]) -> bool:
+        return user.age > age
+
+    compiler = PredicateCompiler[User, bool](
+        {"age__gt": age__gt},
+        lambda schema: Predicate(lambda _: schema["operator"] == "all", operator="logical"),
+    )
+
+    predicate = compiler.compile({"name": "age__gt", "args": ["18"], "kwargs": {}, "inverse": False})  # type: ignore[arg-type]
+
+    assert predicate(User(name="Abdullah", age=20)) is True

@@ -3,7 +3,7 @@ from collections.abc import Callable
 from pprint import pformat
 from typing import Any, Literal, TypedDict, TypeGuard
 
-from .exceptions import MissingArgumentError, RuleDoesNotExistError, is_missing_argument_exception
+from .exceptions import PySpecificationError, RuleDoesNotExistError
 from .json_schema import get_json_schema
 from .predicate import Predicate, ReturnType
 
@@ -133,7 +133,13 @@ class PredicateCompiler[T, R: ReturnType]:
         self._initial_predicate_factory = initial_predicate_factory
 
     def compile(self, expression: ExpressionDict) -> Predicate[T, R]:
-        """Compiles an expression into a predicate."""
+        """Compiles an expression into a predicate.
+
+        Every problem is reported while compiling, before any object is evaluated:
+        unknown rules, bad arguments and failing `Parse` functions. Errors raised
+        by this library carry a note with the JSON path of the offending
+        expression, e.g. `at $.expressions[1]`.
+        """
         return self._compile(expression, path="$")
 
     def _compile(self, expression: ExpressionDict, path: str) -> Predicate[T, R]:
@@ -141,19 +147,18 @@ class PredicateCompiler[T, R: ReturnType]:
             return self._compile_wrapper(expression, path)
 
         if is_predicate_dict(expression):
-            return self._compile_single(expression)
+            return self._compile_single(expression, path)
 
         raise TypeError(_invalid_expression_message(expression, path))
 
-    def _compile_single(self, single: PredicateDict) -> Predicate[T, R]:
-        if single["name"] not in self._rules:
-            raise RuleDoesNotExistError(single["name"], self._rules.keys())
-
+    def _compile_single(self, single: PredicateDict, path: str) -> Predicate[T, R]:
         try:
+            if single["name"] not in self._rules:
+                raise RuleDoesNotExistError(single["name"], self._rules.keys())
+
             predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
-        except TypeError as e:
-            if is_missing_argument_exception(e):
-                raise MissingArgumentError(str(e)) from e
+        except PySpecificationError as error:
+            error.add_note(f"at {path}")
             raise
 
         if single["inverse"]:

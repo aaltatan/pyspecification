@@ -1,20 +1,18 @@
 from collections.abc import Callable
 from functools import wraps
-from inspect import Signature, signature
+from inspect import BoundArguments, Parameter, Signature, signature
 from typing import Any, Concatenate
 
 from .exceptions import (
-    MissingArgumentError,
+    InvalidRuleError,
     PositionalOnlyArgumentError,
     RuleKeyDoesNotExistError,
-    TooManyArgumentsError,
-    UnexpectedKeywordArgumentError,
-    is_missing_argument_exception,
-    is_positional_only_argument_exception,
-    is_too_many_arguments_exception,
-    is_unexpected_keyword_argument_exception,
+    to_argument_error,
 )
+from .parsers import Parse, find_parsers, parse_arguments
 from .predicate import OperatorType, Predicate, ReturnType
+
+_POSITIONAL_KINDS = (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
 
 
 def object_rule[T, R: ReturnType, **P](
@@ -24,9 +22,18 @@ def object_rule[T, R: ReturnType, **P](
 ) -> Callable[[Callable[Concatenate[T, P], R]], Callable[P, Predicate[T, R]]]:
     """A Decorator for creating object-based rules.
 
+    Arguments are bound to the rule signature as soon as the rule is called, so
+    mistakes raise an `ArgumentError` subclass while the predicate is being built,
+    not when it is evaluated. A parameter annotated with `Annotated[T, Parse(fn)]`
+    has `fn` applied to its value at that moment, see `pyspecification.Parse`.
+
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
         predicate_name (str, optional): The name of the predicate. Defaults to None.
+
+    Raises:
+        InvalidRuleError: If the function does not accept the object under test positionally.
+        InvalidParserError: If a `Parse` marker is misplaced.
 
     Example:
     ```python
@@ -82,20 +89,21 @@ def object_rule[T, R: ReturnType, **P](
     def decorator(
         fn: Callable[Concatenate[T, P], R],
     ) -> Callable[P, Predicate[T, R]]:
+        rule_name = predicate_name or fn.__name__
+        arguments_signature = rule_signature(fn, rule_name, reserved=1)
+        parsers = find_parsers(fn, rule_name, skip=1)
+
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
+            bound = bind_arguments(arguments_signature, parsers, rule_name, args, kwargs)
 
             @wraps(fn)
             def inner(obj: T) -> R:
-                try:
-                    return fn(obj, *args, **kwargs)
-                except TypeError as e:
-                    _raise_appropriate_type_error(e, fn)
-                    raise
+                return fn(obj, *bound.args, **bound.kwargs)
 
             return Predicate(inner, operator=operator, name=predicate_name)
 
-        wrapper.__signature__ = subject_less_signature(fn)  # type: ignore[attr-defined]
+        wrapper.__signature__ = arguments_signature  # type: ignore[attr-defined]
 
         return wrapper
 
@@ -111,11 +119,22 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 ) -> Callable[[Callable[Concatenate[T, K, P], R]], Callable[Concatenate[K, P], Predicate[T, R]]]:
     """A Decorator for creating subscriptable-based rules.
 
+    The rule factory takes the key first, then the rule's own arguments. They are
+    bound to the rule signature as soon as the rule is called, so mistakes raise
+    an `ArgumentError` subclass while the predicate is being built, not when it is
+    evaluated. A parameter annotated with `Annotated[T, Parse(fn)]` has `fn`
+    applied to its value at that moment, see `pyspecification.Parse`; the key
+    itself cannot be parsed.
+
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
         predicate_name (str, optional): The name of the predicate. Defaults to None.
         check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to False.
         forbidden_keys (set[str], optional): A set of keys that are not allowed in the dictionary. Defaults to None.
+
+    Raises:
+        InvalidRuleError: If the function does not accept the object and the key positionally.
+        InvalidParserError: If a `Parse` marker is misplaced.
 
     Example:
     ```python
@@ -159,8 +178,15 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     def decorator(
         fn: Callable[Concatenate[T, K, P], R],
     ) -> Callable[Concatenate[K, P], Predicate[T, R]]:
+        rule_name = predicate_name or fn.__name__
+        arguments_signature = rule_signature(fn, rule_name, reserved=2)
+        parsers = find_parsers(fn, rule_name, skip=2)
+        key_name = next(iter(arguments_signature.parameters))
+
         @wraps(fn)
-        def wrapper(key: K, *args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
+        def wrapper(*args: Any, **kwargs: Any) -> Predicate[T, R]:
+            bound = bind_arguments(arguments_signature, parsers, rule_name, args, kwargs)
+            key = bound.arguments[key_name]
 
             @wraps(fn)
             def inner(obj: T) -> R:
@@ -179,38 +205,76 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
                 if any(checker() for checker in checkers):
                     raise RuleKeyDoesNotExistError(str(key), fn.__name__)
 
-                try:
-                    return fn(obj, key, *args, **kwargs)
-                except TypeError as e:
-                    _raise_appropriate_type_error(e, fn)
-                    raise
+                return fn(obj, *bound.args, **bound.kwargs)
 
             return Predicate(inner, operator=operator, name=predicate_name)
 
-        wrapper.__signature__ = subject_less_signature(fn)  # type: ignore[attr-defined]
+        wrapper.__signature__ = arguments_signature  # type: ignore[attr-defined]
 
         return wrapper
 
     return decorator
 
 
-def subject_less_signature(fn: Callable[..., Any]) -> Signature:
-    """Return the signature of `fn` without its first parameter, the object under test."""
-    fn_signature = signature(fn)
-    return fn_signature.replace(parameters=list(fn_signature.parameters.values())[1:])
+def rule_signature(fn: Callable[..., Any], rule_name: str, *, reserved: int) -> Signature:
+    """Return the signature of a rule factory: `fn` without the object under test.
+
+    `fn` must accept its first `reserved` parameters positionally: just the
+    object under test for object rules, plus the key for subscriptable rules.
+    Only the object under test is dropped, the key stays an argument of the factory.
+
+    Raises:
+        InvalidRuleError: If `fn` does not accept them positionally.
+    """
+    try:
+        parameters = list(signature(fn).parameters.values())
+    except ValueError as error:
+        msg = f"Rule '{rule_name}' must accept the object under test as its first positional parameter"
+        raise InvalidRuleError(msg) from error
+
+    leading = parameters[:reserved]
+
+    if len(leading) < reserved or any(p.kind not in _POSITIONAL_KINDS for p in leading):
+        needed = "the object under test and the key" if reserved == 2 else "the object under test"  # noqa: PLR2004
+        msg = f"Rule '{rule_name}' must accept {needed} as its leading positional parameters"
+        raise InvalidRuleError(msg)
+
+    return Signature(parameters[1:])
 
 
-def _raise_appropriate_type_error(e: TypeError, fn: Callable[..., Any]) -> None:
-    error_message = str(e) + f" at {fn.__name__}"
+def bind_arguments(
+    arguments_signature: Signature,
+    parsers: dict[str, tuple[Parse, ...]],
+    rule_name: str,
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> BoundArguments:
+    """Bind rule arguments to a signature, raising the matching `ArgumentError`, then parse them.
 
-    if is_missing_argument_exception(e):
-        raise MissingArgumentError(error_message) from e
+    Problems are reported in the order Python itself reports them for a call:
+    keywords that cannot be passed by name first, then surplus or repeated
+    arguments, and only then the missing ones. So a typo in a keyword is
+    reported as an unexpected keyword rather than as a missing argument.
+    """
+    parameters = arguments_signature.parameters
 
-    if is_unexpected_keyword_argument_exception(e):
-        raise UnexpectedKeywordArgumentError(error_message) from e
+    if not any(p.kind is Parameter.VAR_KEYWORD for p in parameters.values()) and (
+        positional_only := [
+            name
+            for name in kwargs
+            if name in parameters and parameters[name].kind is Parameter.POSITIONAL_ONLY
+        ]
+    ):
+        msg = (
+            "got some positional-only arguments passed as keyword arguments: "
+            f"{', '.join(positional_only)} for rule '{rule_name}'"
+        )
+        raise PositionalOnlyArgumentError(msg)
 
-    if is_too_many_arguments_exception(e):
-        raise TooManyArgumentsError(error_message) from e
+    try:
+        arguments_signature.bind_partial(*args, **kwargs)
+        bound = arguments_signature.bind(*args, **kwargs)
+    except TypeError as error:
+        raise to_argument_error(error, rule_name) from error
 
-    if is_positional_only_argument_exception(e):
-        raise PositionalOnlyArgumentError(error_message) from e
+    return parse_arguments(parsers, bound) if parsers else bound

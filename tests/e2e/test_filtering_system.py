@@ -1,12 +1,13 @@
 # ruff: noqa: DTZ001, DTZ007
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
 import pytest
 from pyspecification import (
     MissingArgumentError,
+    Parse,
+    ParseArgumentError,
     PredicateCompiler,
-    ProcessArgumentError,
     RuleDoesNotExistError,
     SubscriptableRulesRegistry,
     TooManyArgumentsError,
@@ -85,8 +86,12 @@ def rules() -> SubscriptableRulesRegistry[dict[str, Any], str, bool]:
     def is_true(obj: dict[str, Any], key: str) -> bool:
         return obj[key] is True
 
-    @rules.rule(processors={"value": lambda value: datetime.strptime(value, "%Y-%m-%d")})
-    def datetime__gt(obj: dict[str, Any], key: str, value: datetime) -> bool:
+    @rules.rule()
+    def datetime__gt(
+        obj: dict[str, Any],
+        key: str,
+        value: Annotated[datetime, Parse(lambda value: datetime.strptime(value, "%Y-%m-%d"))],
+    ) -> bool:
         return obj[key] > value
 
     @rules.rule()
@@ -211,7 +216,7 @@ def test_filtering_system(
         ),
         (
             {"name": "string__startswith", "args": [], "kwargs": {"key": "name"}, "inverse": False},
-            MissingArgumentError,
+            PositionalOnlyArgumentError,
         ),
         (
             {
@@ -220,7 +225,7 @@ def test_filtering_system(
                 "kwargs": {"key": "name", "value_not_exists": "sss"},
                 "inverse": False,
             },
-            UnexpectedKeywordArgumentError,
+            PositionalOnlyArgumentError,
         ),
         (
             {
@@ -382,8 +387,8 @@ def test_filtering_system_with_invalid_datetime_format_arg(
     compiler: PredicateCompiler[dict[str, Any], bool],
 ) -> None:
     with pytest.raises(
-        ProcessArgumentError,
-        match="Argument 'value' with value '06-01-2001' failed to process",
+        ParseArgumentError,
+        match="Argument 'value' with value '06-01-2001' failed to parse",
     ):
         compiler.compile(
             {
@@ -399,8 +404,8 @@ def test_filtering_system_with_invalid_datetime_format_kwarg(
     compiler: PredicateCompiler[dict[str, Any], bool],
 ) -> None:
     with pytest.raises(
-        ProcessArgumentError,
-        match="Argument 'value' with value '06-01-2001' failed to process",
+        ParseArgumentError,
+        match="Argument 'value' with value '06-01-2001' failed to parse",
     ):
         compiler.compile(
             {

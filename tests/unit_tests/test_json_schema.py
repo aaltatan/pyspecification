@@ -403,7 +403,7 @@ def test_get_rule_json_schema_of_registered_rules() -> None:
     obj_registry = ObjectRulesRegistry[User, bool](operator="logical")
     sub_registry = SubscriptableRulesRegistry[dict[str, Any], str, bool](operator="logical")
 
-    @obj_registry.rule(processors={"value": str})
+    @obj_registry.rule()
     def name__eq(user: User, value: str) -> bool:
         """Name equals."""
         return user.name == value
