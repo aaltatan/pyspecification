@@ -3,6 +3,8 @@ from collections.abc import Callable
 from pprint import pformat
 from typing import Any, Literal, TypedDict, TypeGuard
 
+from pyargprocessors import PyargprocessorsError
+
 from .exceptions import PySpecificationError, RuleDoesNotExistError
 from .json_schema import get_json_schema
 from .predicate import Predicate, ReturnType
@@ -136,7 +138,7 @@ class PredicateCompiler[T, R: ReturnType]:
         """Compiles an expression into a predicate.
 
         Every problem is reported while compiling, before any object is evaluated:
-        unknown rules, bad arguments and failing `Parse` functions. Errors raised
+        unknown rules, bad arguments and failing `Process` functions. Errors raised
         by this library carry a note with the JSON path of the offending
         expression, e.g. `at $.expressions[1]`.
         """
@@ -157,7 +159,7 @@ class PredicateCompiler[T, R: ReturnType]:
                 raise RuleDoesNotExistError(single["name"], self._rules.keys())
 
             predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
-        except PySpecificationError as error:
+        except (PySpecificationError, PyargprocessorsError) as error:
             error.add_note(f"at {path}")
             raise
 

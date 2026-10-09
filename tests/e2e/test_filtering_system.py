@@ -5,8 +5,8 @@ from typing import Annotated, Any
 import pytest
 from pyspecification import (
     MissingArgumentError,
-    Parse,
-    ParseArgumentError,
+    Process,
+    ProcessArgumentError,
     PredicateCompiler,
     RuleDoesNotExistError,
     SubscriptableRulesRegistry,
@@ -90,7 +90,7 @@ def rules() -> SubscriptableRulesRegistry[dict[str, Any], str, bool]:
     def datetime__gt(
         obj: dict[str, Any],
         key: str,
-        value: Annotated[datetime, Parse(lambda value: datetime.strptime(value, "%Y-%m-%d"))],
+        value: Annotated[datetime, Process(lambda value: datetime.strptime(value, "%Y-%m-%d"))],
     ) -> bool:
         return obj[key] > value
 
@@ -387,8 +387,8 @@ def test_filtering_system_with_invalid_datetime_format_arg(
     compiler: PredicateCompiler[dict[str, Any], bool],
 ) -> None:
     with pytest.raises(
-        ParseArgumentError,
-        match="Argument 'value' with value '06-01-2001' failed to parse",
+        ProcessArgumentError,
+        match="Argument 'value' with value '06-01-2001' failed to process",
     ):
         compiler.compile(
             {
@@ -404,8 +404,8 @@ def test_filtering_system_with_invalid_datetime_format_kwarg(
     compiler: PredicateCompiler[dict[str, Any], bool],
 ) -> None:
     with pytest.raises(
-        ParseArgumentError,
-        match="Argument 'value' with value '06-01-2001' failed to parse",
+        ProcessArgumentError,
+        match="Argument 'value' with value '06-01-2001' failed to process",
     ):
         compiler.compile(
             {

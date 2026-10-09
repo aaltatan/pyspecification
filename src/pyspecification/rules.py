@@ -3,13 +3,14 @@ from functools import wraps
 from inspect import BoundArguments, Parameter, Signature, signature
 from typing import Any, Concatenate
 
+from pyargprocessors import Process, find_processors, process_arguments
+
 from .exceptions import (
     InvalidRuleError,
     PositionalOnlyArgumentError,
     RuleKeyDoesNotExistError,
     to_argument_error,
 )
-from .parsers import Parse, find_parsers, parse_arguments
 from .predicate import OperatorType, Predicate, ReturnType
 
 _POSITIONAL_KINDS = (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
@@ -24,8 +25,8 @@ def object_rule[T, R: ReturnType, **P](
 
     Arguments are bound to the rule signature as soon as the rule is called, so
     mistakes raise an `ArgumentError` subclass while the predicate is being built,
-    not when it is evaluated. A parameter annotated with `Annotated[T, Parse(fn)]`
-    has `fn` applied to its value at that moment, see `pyspecification.Parse`.
+    not when it is evaluated. A parameter annotated with `Annotated[T, Process(fn)]`
+    has `fn` applied to its value at that moment, see `pyargprocessors.Process`.
 
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
@@ -33,7 +34,7 @@ def object_rule[T, R: ReturnType, **P](
 
     Raises:
         InvalidRuleError: If the function does not accept the object under test positionally.
-        InvalidParserError: If a `Parse` marker is misplaced.
+        InvalidProcessorError: If a `Process` marker is misplaced.
 
     Example:
     ```python
@@ -91,11 +92,11 @@ def object_rule[T, R: ReturnType, **P](
     ) -> Callable[P, Predicate[T, R]]:
         rule_name = predicate_name or fn.__name__
         arguments_signature = rule_signature(fn, rule_name, reserved=1)
-        parsers = find_parsers(fn, rule_name, skip=1)
+        processors = find_processors(fn, name=rule_name, skip=1)
 
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            bound = bind_arguments(arguments_signature, parsers, rule_name, args, kwargs)
+            bound = bind_arguments(arguments_signature, processors, rule_name, args, kwargs)
 
             @wraps(fn)
             def inner(obj: T) -> R:
@@ -122,9 +123,9 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     The rule factory takes the key first, then the rule's own arguments. They are
     bound to the rule signature as soon as the rule is called, so mistakes raise
     an `ArgumentError` subclass while the predicate is being built, not when it is
-    evaluated. A parameter annotated with `Annotated[T, Parse(fn)]` has `fn`
-    applied to its value at that moment, see `pyspecification.Parse`; the key
-    itself cannot be parsed.
+    evaluated. A parameter annotated with `Annotated[T, Process(fn)]` has `fn`
+    applied to its value at that moment, see `pyargprocessors.Process`; the key
+    itself cannot be processed.
 
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
@@ -134,7 +135,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
     Raises:
         InvalidRuleError: If the function does not accept the object and the key positionally.
-        InvalidParserError: If a `Parse` marker is misplaced.
+        InvalidProcessorError: If a `Process` marker is misplaced.
 
     Example:
     ```python
@@ -180,12 +181,12 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     ) -> Callable[Concatenate[K, P], Predicate[T, R]]:
         rule_name = predicate_name or fn.__name__
         arguments_signature = rule_signature(fn, rule_name, reserved=2)
-        parsers = find_parsers(fn, rule_name, skip=2)
+        processors = find_processors(fn, name=rule_name, skip=2)
         key_name = next(iter(arguments_signature.parameters))
 
         @wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Predicate[T, R]:
-            bound = bind_arguments(arguments_signature, parsers, rule_name, args, kwargs)
+            bound = bind_arguments(arguments_signature, processors, rule_name, args, kwargs)
             key = bound.arguments[key_name]
 
             @wraps(fn)
@@ -244,12 +245,12 @@ def rule_signature(fn: Callable[..., Any], rule_name: str, *, reserved: int) -> 
 
 def bind_arguments(
     arguments_signature: Signature,
-    parsers: dict[str, tuple[Parse, ...]],
+    processors: dict[str, tuple[Process, ...]],
     rule_name: str,
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
 ) -> BoundArguments:
-    """Bind rule arguments to a signature, raising the matching `ArgumentError`, then parse them.
+    """Bind rule arguments to a signature, raising the matching `ArgumentError`, then process them.
 
     Problems are reported in the order Python itself reports them for a call:
     keywords that cannot be passed by name first, then surplus or repeated
@@ -277,4 +278,4 @@ def bind_arguments(
     except TypeError as error:
         raise to_argument_error(error, rule_name) from error
 
-    return parse_arguments(parsers, bound) if parsers else bound
+    return process_arguments(processors, bound) if processors else bound

@@ -40,14 +40,6 @@ class InvalidRuleError(PySpecificationError, TypeError):
     """
 
 
-class InvalidParserError(PySpecificationError, TypeError):
-    """Exception raised when a `Parse(...)` marker cannot work.
-
-    For example a parser that is not callable, a marker on the object under test
-    or on the key, or a marker used as a default value instead of inside `Annotated`.
-    """
-
-
 class ArgumentError(PySpecificationError, TypeError):
     """Base class for errors caused by the arguments given to a rule."""
 
@@ -70,10 +62,6 @@ class MultipleValuesArgumentError(ArgumentError):
 
 class PositionalOnlyArgumentError(ArgumentError):
     """Exception raised when positional-only argument is passed as keyword argument."""
-
-
-class ParseArgumentError(ArgumentError):
-    """Exception raised when a `Parse` function fails on the value given for an argument."""
 
 
 _ARGUMENT_ERROR_PATTERNS: tuple[tuple[str, type[ArgumentError]], ...] = (

@@ -10,7 +10,7 @@ import pytest
 from pyspecification import (
     ExpressionWrapperDict,
     ObjectRulesRegistry,
-    Parse,
+    Process,
     Predicate,
     PredicateCompiler,
     PredicateDict,
@@ -560,7 +560,7 @@ def test_wrapper_typed_dict_schema_has_all_fields() -> None:
 
 
 # -----------------------
-# parse
+# process
 # -----------------------
 
 
@@ -572,33 +572,33 @@ def untyped_loader(path):  # type: ignore[no-untyped-def]  # noqa: ANN001, ANN20
     return path
 
 
-type Names = Annotated[frozenset[str], Parse(load_names)]
-type Money = Annotated[Decimal, Parse(Decimal)]
+type Names = Annotated[frozenset[str], Process(load_names)]
+type Money = Annotated[Decimal, Process(Decimal)]
 
 
 @pytest.mark.parametrize(
     ("annotation", "expected"),
     [
-        (Annotated[frozenset[str], Parse(load_names)], {"type": "string"}),
+        (Annotated[frozenset[str], Process(load_names)], {"type": "string"}),
         (Names, {"type": "string"}),
-        (Annotated[Decimal, Parse(Decimal)], {"type": "number"}),
+        (Annotated[Decimal, Process(Decimal)], {"type": "number"}),
         (Money, {"type": "number"}),
-        (Annotated[int, Parse(str.strip), Parse(int)], {"type": "integer"}),
-        (Annotated[list[str], Parse(untyped_loader)], {"type": "array", "items": {"type": "string"}}),
-        (Annotated[int, Parse(lambda value: value)], {"type": "integer"}),
+        (Annotated[int, Process(str.strip), Process(int)], {"type": "integer"}),
+        (Annotated[list[str], Process(untyped_loader)], {"type": "array", "items": {"type": "string"}}),
+        (Annotated[int, Process(lambda value: value)], {"type": "integer"}),
         (Annotated[Names, "metadata"], {"type": "string"}),
         (list[Names], {"type": "array", "items": {"type": "string"}}),
         (Names | None, {"anyOf": [{"type": "string"}, {"type": "null"}]}),
     ],
 )
-def test_get_json_schema_describes_what_the_parser_accepts(
+def test_get_json_schema_describes_what_the_processor_accepts(
     annotation: Any, expected: dict[str, Any]
 ) -> None:
 
     assert get_json_schema(annotation) == expected
 
 
-def test_get_json_schema_of_typed_dict_field_with_parse() -> None:
+def test_get_json_schema_of_typed_dict_field_with_process() -> None:
     class Payload(TypedDict):
         names: Names
         plain: int
@@ -609,13 +609,13 @@ def test_get_json_schema_of_typed_dict_field_with_parse() -> None:
     }
 
 
-def test_get_rule_json_schema_describes_the_unparsed_arguments() -> None:
+def test_get_rule_json_schema_describes_the_unprocessed_arguments() -> None:
     @object_rule()
     def exclude(
         user: User,
         names: Names,
         price: Money,
-        limit: Annotated[int, Parse(int)] = 3,
+        limit: Annotated[int, Process(int)] = 3,
     ) -> bool:
         return True
 

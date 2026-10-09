@@ -4,8 +4,8 @@ from typing import Annotated, Any
 import pytest
 from pyspecification import (
     MissingArgumentError,
-    Parse,
-    ParseArgumentError,
+    Process,
+    ProcessArgumentError,
     Predicate,
     PredicateCompiler,
     RuleDoesNotExistError,
@@ -330,9 +330,9 @@ def test_compiler_errors_carry_the_json_path_of_the_expression(
     assert unknown.value.__notes__ == ["at $"]
 
 
-def test_compiler_parse_failure_is_reported_with_its_path() -> None:
+def test_compiler_process_failure_is_reported_with_its_path() -> None:
     @object_rule()
-    def age__gt(user: User, age: Annotated[int, Parse(int)]) -> bool:
+    def age__gt(user: User, age: Annotated[int, Process(int)]) -> bool:
         return user.age > age
 
     compiler = PredicateCompiler[User, bool](
@@ -340,7 +340,7 @@ def test_compiler_parse_failure_is_reported_with_its_path() -> None:
         lambda schema: Predicate(lambda _: schema["operator"] == "all", operator="logical"),
     )
 
-    with pytest.raises(ParseArgumentError, match="Argument 'age' with value 'old'") as error:
+    with pytest.raises(ProcessArgumentError, match="Argument 'age' with value 'old'") as error:
         compiler.compile(
             {
                 "operator": "any",
@@ -354,9 +354,9 @@ def test_compiler_parse_failure_is_reported_with_its_path() -> None:
     assert error.value.__notes__ == ["at $.expressions[1]"]
 
 
-def test_compiler_parses_arguments_before_evaluating_anything() -> None:
+def test_compiler_processes_arguments_before_evaluating_anything() -> None:
     @object_rule()
-    def age__gt(user: User, age: Annotated[int, Parse(int)]) -> bool:
+    def age__gt(user: User, age: Annotated[int, Process(int)]) -> bool:
         return user.age > age
 
     compiler = PredicateCompiler[User, bool](

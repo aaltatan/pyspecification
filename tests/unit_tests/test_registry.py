@@ -4,12 +4,12 @@ from typing import Annotated, Any
 
 import pytest
 from pyspecification import (
-    InvalidParserError,
+    InvalidProcessorError,
     InvalidRuleError,
     MissingArgumentError,
     ObjectRulesRegistry,
-    Parse,
-    ParseArgumentError,
+    Process,
+    ProcessArgumentError,
     RuleAlreadyRegisteredError,
     RuleDoesNotExistError,
     SubscriptableRulesRegistry,
@@ -105,8 +105,8 @@ def test_obj_registry_invalid_name(obj_registry: ObjectRulesRegistry[User, bool]
         obj_registry.register_rule(invalid_name_rule, name="123_invalid")
 
 
-def test_obj_registry_parse(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
-    def is_age(user: User, age: Annotated[int, Parse(int)]) -> bool:
+def test_obj_registry_process(obj_registry: ObjectRulesRegistry[User, bool]) -> None:
+    def is_age(user: User, age: Annotated[int, Process(int)]) -> bool:
         return user.age == age
 
     obj_registry.register_rule(is_age)
@@ -283,10 +283,10 @@ def test_sub_registry_invalid_name(
         sub_registry.register_rule(invalid_name_rule, name="123_invalid")
 
 
-def test_sub_registry_parse(
+def test_sub_registry_process(
     sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
-    def is_age(obj: dict[str, Any], key: str, age: Annotated[int, Parse(int)]) -> bool:
+    def is_age(obj: dict[str, Any], key: str, age: Annotated[int, Process(int)]) -> bool:
         return obj[key] == age
 
     sub_registry.register_rule(is_age)
@@ -371,20 +371,20 @@ def test_description(
 
 
 # -----------------------
-# parse
+# process
 # -----------------------
 
-type Text = Annotated[str, Parse(str.strip), Parse(str.lower)]
+type Text = Annotated[str, Process(str.strip), Process(str.lower)]
 
 
-def test_obj_registry_parse_applies_by_name_for_positional_and_keyword(
+def test_obj_registry_process_applies_by_name_for_positional_and_keyword(
     obj_registry: ObjectRulesRegistry[User, bool],
 ) -> None:
     @obj_registry.rule()
     def age__between(
         user: User,
-        min_age: Annotated[int, Parse(int)],
-        max_age: Annotated[int, Parse(int)],
+        min_age: Annotated[int, Process(int)],
+        max_age: Annotated[int, Process(int)],
     ) -> bool:
         return min_age <= user.age <= max_age
 
@@ -395,7 +395,7 @@ def test_obj_registry_parse_applies_by_name_for_positional_and_keyword(
     assert age__between(min_age="21", max_age="30")(user) is False
 
 
-def test_obj_registry_parse_alias_is_reused_and_unmarked_parameters_are_untouched(
+def test_obj_registry_process_alias_is_reused_and_unmarked_parameters_are_untouched(
     obj_registry: ObjectRulesRegistry[User, bool],
 ) -> None:
     @obj_registry.rule()
@@ -405,34 +405,34 @@ def test_obj_registry_parse_alias_is_reused_and_unmarked_parameters_are_untouche
     assert matches("  Test ", " Raw ")(User(name="test", age=20)) is True
 
 
-def test_obj_registry_parse_does_not_apply_to_defaults(
+def test_obj_registry_process_does_not_apply_to_defaults(
     obj_registry: ObjectRulesRegistry[User, bool],
 ) -> None:
     @obj_registry.rule()
-    def older_than(user: User, age: Annotated[int, Parse(int)] = 5) -> bool:
+    def older_than(user: User, age: Annotated[int, Process(int)] = 5) -> bool:
         return user.age > age
 
     assert older_than()(User(name="Test", age=6)) is True
 
 
-def test_obj_registry_parse_failure_raises_parse_argument_error_when_the_rule_is_built(
+def test_obj_registry_process_failure_raises_parse_argument_error_when_the_rule_is_built(
     obj_registry: ObjectRulesRegistry[User, bool],
 ) -> None:
     @obj_registry.rule()
-    def older_than(user: User, age: Annotated[int, Parse(int)]) -> bool:
+    def older_than(user: User, age: Annotated[int, Process(int)]) -> bool:
         return user.age > age
 
-    with pytest.raises(ParseArgumentError, match="Argument 'age' with value 'abc'"):
+    with pytest.raises(ProcessArgumentError, match="Argument 'age' with value 'abc'"):
         older_than("abc")
 
 
-def test_obj_registry_misplaced_parse_fails_at_registration_and_registers_nothing(
+def test_obj_registry_misplaced_process_fails_at_registration_and_registers_nothing(
     obj_registry: ObjectRulesRegistry[User, bool],
 ) -> None:
-    def older_than(user: Annotated[User, Parse(str)], age: int) -> bool:
+    def older_than(user: Annotated[User, Process(str)], age: int) -> bool:
         return user.age > age
 
-    with pytest.raises(InvalidParserError, match="cannot parse 'user'"):
+    with pytest.raises(InvalidProcessorError, match="cannot process 'user'"):
         obj_registry.register_rule(older_than, hidden=True)
 
     assert "older_than" not in obj_registry.rules
@@ -469,24 +469,24 @@ def test_obj_registry_arity_errors_are_raised_when_the_rule_is_built(
         older_than(age=1, other=2)
 
 
-def test_sub_registry_parse_leaves_the_key_untouched(
+def test_sub_registry_process_leaves_the_key_untouched(
     sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     @sub_registry.rule()
-    def is_age(obj: dict[str, Any], key: str, age: Annotated[int, Parse(int)]) -> bool:
+    def is_age(obj: dict[str, Any], key: str, age: Annotated[int, Process(int)]) -> bool:
         return obj[key] == age
 
     assert is_age("age", "20")({"age": 20}) is True
     assert is_age(key="age", age="20")({"age": 20}) is True
 
 
-def test_sub_registry_parse_on_the_key_is_rejected(
+def test_sub_registry_process_on_the_key_is_rejected(
     sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
-    def is_age(obj: dict[str, Any], key: Annotated[str, Parse(str.strip)], age: int) -> bool:
+    def is_age(obj: dict[str, Any], key: Annotated[str, Process(str.strip)], age: int) -> bool:
         return obj[key] == age
 
-    with pytest.raises(InvalidParserError, match="cannot parse 'key'"):
+    with pytest.raises(InvalidProcessorError, match="cannot process 'key'"):
         sub_registry.register_rule(is_age)
 
 
@@ -504,7 +504,7 @@ def test_sub_registry_key_check_still_uses_the_parsed_signature_key(
     sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
     @sub_registry.rule(forbidden_keys=("secret",))
-    def is_age(obj: dict[str, Any], idx: str, age: Annotated[int, Parse(int)]) -> bool:
+    def is_age(obj: dict[str, Any], idx: str, age: Annotated[int, Process(int)]) -> bool:
         return obj[idx] == age
 
     with pytest.raises(RuleKeyDoesNotExistError, match="Key 'secret'"):
