@@ -11,7 +11,7 @@ from .exceptions import (
     RuleKeyDoesNotExistError,
     to_argument_error,
 )
-from .predicate import OperatorType, Predicate, ReturnType
+from .predicate import Failure, OperatorType, Predicate, ReturnType
 
 _POSITIONAL_KINDS = (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
 
@@ -96,13 +96,20 @@ def object_rule[T, R: ReturnType, **P](
 
         @wraps(fn)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Predicate[T, R]:
-            bound = bind_arguments(arguments_signature, processors, rule_name, args, kwargs)
+            bound = bind_arguments(
+                arguments_signature, processors, rule_name, args, kwargs
+            )
 
             @wraps(fn)
             def inner(obj: T) -> R:
                 return fn(obj, *bound.args, **bound.kwargs)
 
-            return Predicate(inner, operator=operator, name=predicate_name)
+            return Predicate(
+                inner,
+                operator=operator,
+                name=predicate_name,
+                failure=Failure(rule_name, tuple(bound.args), dict(bound.kwargs)),
+            )
 
         wrapper.__signature__ = arguments_signature  # type: ignore[attr-defined]
 
@@ -117,7 +124,9 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     predicate_name: str | None = None,
     check_key_existence: bool = False,
     forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
-) -> Callable[[Callable[Concatenate[T, K, P], R]], Callable[Concatenate[K, P], Predicate[T, R]]]:
+) -> Callable[
+    [Callable[Concatenate[T, K, P], R]], Callable[Concatenate[K, P], Predicate[T, R]]
+]:
     """A Decorator for creating subscriptable-based rules.
 
     The rule factory takes the key first, then the rule's own arguments. They are
@@ -186,7 +195,9 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
         @wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Predicate[T, R]:
-            bound = bind_arguments(arguments_signature, processors, rule_name, args, kwargs)
+            bound = bind_arguments(
+                arguments_signature, processors, rule_name, args, kwargs
+            )
             key = bound.arguments[key_name]
 
             @wraps(fn)
@@ -200,7 +211,9 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
                         and isinstance(key, int)
                         and not (-len(obj) <= key < len(obj))
                     ),
-                    lambda: check_key_existence and isinstance(obj, dict) and key not in obj,
+                    lambda: (
+                        check_key_existence and isinstance(obj, dict) and key not in obj
+                    ),
                 ]
 
                 if any(checker() for checker in checkers):
@@ -208,7 +221,12 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
 
                 return fn(obj, *bound.args, **bound.kwargs)
 
-            return Predicate(inner, operator=operator, name=predicate_name)
+            return Predicate(
+                inner,
+                operator=operator,
+                name=predicate_name,
+                failure=Failure(rule_name, tuple(bound.args), dict(bound.kwargs)),
+            )
 
         wrapper.__signature__ = arguments_signature  # type: ignore[attr-defined]
 
@@ -217,7 +235,9 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     return decorator
 
 
-def rule_signature(fn: Callable[..., Any], rule_name: str, *, reserved: int) -> Signature:
+def rule_signature(
+    fn: Callable[..., Any], rule_name: str, *, reserved: int
+) -> Signature:
     """Return the signature of a rule factory: `fn` without the object under test.
 
     `fn` must accept its first `reserved` parameters positionally: just the
@@ -236,7 +256,11 @@ def rule_signature(fn: Callable[..., Any], rule_name: str, *, reserved: int) -> 
     leading = parameters[:reserved]
 
     if len(leading) < reserved or any(p.kind not in _POSITIONAL_KINDS for p in leading):
-        needed = "the object under test and the key" if reserved == 2 else "the object under test"  # noqa: PLR2004
+        needed = (
+            "the object under test and the key"
+            if reserved == 2
+            else "the object under test"
+        )  # noqa: PLR2004
         msg = f"Rule '{rule_name}' must accept {needed} as its leading positional parameters"
         raise InvalidRuleError(msg)
 
