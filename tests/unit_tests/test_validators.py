@@ -35,3 +35,9 @@ def test_valid_naming_convention(value: str) -> None:
 def test_invalid_naming_convention(value: str) -> None:
     with pytest.raises(ValueError):
         validate_python_vars_fn_naming_convention(value)
+
+
+def test_trailing_newline_is_rejected() -> None:
+    # `re.match` with `$` used to accept "is_true\n"; pyvocabulary uses `fullmatch`.
+    with pytest.raises(ValueError, match="Invalid name"):
+        validate_python_vars_fn_naming_convention("is_true\n")
