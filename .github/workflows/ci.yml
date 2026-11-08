@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# No ruff steps: pyspecification has no ruff config of its own yet, so CI would
+# lint with different rules than the author's machine.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      # the dev group includes SQLAlchemy, so tests/e2e runs here too
+      - run: uv sync
+      - run: uv run pytest --cov --cov-branch
+      - run: uvx pyright src

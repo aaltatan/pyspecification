@@ -9,6 +9,7 @@
 ## Next
 - [x] `Failure.message`: a `message=` option at registration (and on `object_rule`/`subscriptable_rule`), defaulting to the description, then the docstring
 - [x] Collect doctests (`--doctest-modules`): already in `addopts`
-- [ ] Run the SQLAlchemy end-to-end test in CI (it needs SQLAlchemy installed)
+- [x] Run the SQLAlchemy end-to-end test in CI (`.github/workflows/ci.yml`, pytest and pyright on 3.12 and 3.13; SQLAlchemy comes from the dev group)
+- [ ] Give the repo its own ruff config (it uses `~/ruff.toml` today), fix the 32 findings, then add ruff to CI
 - [x] Clean up the 3 pre-existing `mypy --strict` findings (unused `type: ignore` in `registry.py`, untyped call in `rules.py`)
 - [x] Remove unused `noqa` directives flagged by ruff `RUF100`

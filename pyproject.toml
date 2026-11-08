@@ -34,3 +34,7 @@ dev = [
     "sqlalchemy>=2.0.52",
 ]
 
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
