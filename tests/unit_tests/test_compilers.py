@@ -4,10 +4,10 @@ from typing import Annotated, Any
 import pytest
 from pyspecification import (
     MissingArgumentError,
-    Process,
-    ProcessArgumentError,
     Predicate,
     PredicateCompiler,
+    Process,
+    ProcessArgumentError,
     RuleDoesNotExistError,
     TooManyArgumentsError,
     object_rule,

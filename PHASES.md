@@ -8,7 +8,7 @@
 
 ## Next
 - [ ] `Failure.message`: a `message=` option at registration, defaulting to the rule description
-- [ ] Collect doctests (`--doctest-modules`) like the sibling packages
+- [x] Collect doctests (`--doctest-modules`): already in `addopts`
 - [ ] Run the SQLAlchemy end-to-end test in CI (it needs SQLAlchemy installed)
-- [ ] Clean up the 3 pre-existing `mypy --strict` findings (unused `type: ignore` in `registry.py`, untyped call in `rules.py`)
-- [ ] Remove unused `noqa` directives flagged by ruff `RUF100`
+- [x] Clean up the 3 pre-existing `mypy --strict` findings (unused `type: ignore` in `registry.py`, untyped call in `rules.py`)
+- [x] Remove unused `noqa` directives flagged by ruff `RUF100`

@@ -192,7 +192,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
             @wraps(fn)
             def inner(obj: T) -> R:
 
-                checkers = [
+                checkers: list[Callable[[], bool]] = [
                     lambda: forbidden_keys is not None and key in forbidden_keys,
                     lambda: (
                         check_key_existence
@@ -226,6 +226,7 @@ def rule_signature(fn: Callable[..., Any], rule_name: str, *, reserved: int) -> 
 
     Raises:
         InvalidRuleError: If `fn` does not accept them positionally.
+
     """
     try:
         parameters = list(signature(fn).parameters.values())
@@ -236,7 +237,7 @@ def rule_signature(fn: Callable[..., Any], rule_name: str, *, reserved: int) -> 
     leading = parameters[:reserved]
 
     if len(leading) < reserved or any(p.kind not in _POSITIONAL_KINDS for p in leading):
-        needed = "the object under test and the key" if reserved == 2 else "the object under test"  # noqa: PLR2004
+        needed = "the object under test and the key" if reserved == 2 else "the object under test"
         msg = f"Rule '{rule_name}' must accept {needed} as its leading positional parameters"
         raise InvalidRuleError(msg)
 
