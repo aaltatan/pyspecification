@@ -316,7 +316,7 @@ def test_get_rule_json_schema_for_rule_without_parameters() -> None:
 
     schema = get_rule_json_schema("rule", rule)
 
-    assert args_of(schema) == {"type": "array", "prefixItems": [], "items": False}
+    assert args_of(schema) == {"type": "array", "items": False}
     assert kwargs_of(schema) == {
         "type": "object",
         "properties": {},
