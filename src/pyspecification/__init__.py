@@ -20,14 +20,19 @@ from .exceptions import (
     TooManyArgumentsError,
     UnexpectedKeywordArgumentError,
 )
-from .json_schema import get_expression_json_schema, get_json_schema, get_rule_json_schema
-from .predicate import OperatorType, Predicate
+from .json_schema import (
+    get_expression_json_schema,
+    get_json_schema,
+    get_rule_json_schema,
+)
+from .predicate import Failure, OperatorType, Predicate
 from .registry import ObjectRulesRegistry, SubscriptableRulesRegistry
 from .rules import object_rule, subscriptable_rule
 
 __all__ = [
     "ArgumentError",
     "ExpressionWrapperDict",
+    "Failure",
     "InvalidProcessorError",
     "InvalidRuleError",
     "MissingArgumentError",
