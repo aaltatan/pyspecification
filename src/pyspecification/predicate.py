@@ -14,13 +14,15 @@ class Failure:
     """A rule that made a predicate fail for an object.
 
     `negated` is `True` when the rule passed but the predicate required it not to,
-    as in `~is_admin()` for an admin.
+    as in `~is_admin()` for an admin. `message` is the rule's `message=`, its
+    description or its docstring, for showing to users.
     """
 
     rule: str
     args: tuple[Any, ...] = ()
     kwargs: Mapping[str, Any] = field(default_factory=dict)
     negated: bool = False
+    message: str | None = None
 
     def __str__(self) -> str:
         arguments = [

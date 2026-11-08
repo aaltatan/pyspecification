@@ -227,6 +227,24 @@ print(rules["administrator"].__doc__)  # The overridden description
 When an override is omitted, the function name and docstring are retained.
 The same options are available on `SubscriptableRulesRegistry`.
 
+#### Why a predicate failed
+
+`failures(obj)` returns the rules that made a logical predicate fail, or `()`
+when it passes. Each `Failure` carries the rule name, its bound arguments,
+whether it failed because of `~`, and a `message` for users: the rule's
+`message=`, otherwise its description, otherwise its docstring.
+
+```python
+@registry.rule(message="You must be at least 18")
+def age__ge(user: User, minimum: int) -> bool:
+    return user.age >= minimum
+
+rule = registry["age__ge"](18) & registry["is_admin"]()
+
+[str(f) for f in rule.failures(teen)]       # ['age__ge(18)', 'is_admin']
+[f.message for f in rule.failures(teen)]    # ['You must be at least 18', None]
+```
+
 ---
 
 ### 5. SQLAlchemy integration example

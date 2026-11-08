@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import wraps
-from inspect import BoundArguments, Parameter, Signature, signature
+from inspect import BoundArguments, Parameter, Signature, cleandoc, signature
 from typing import Any, Concatenate
 
 from pyargprocessors import Process, find_processors, process_arguments
@@ -20,6 +20,7 @@ def object_rule[T, R: ReturnType, **P](
     *,
     operator: OperatorType = "logical",
     predicate_name: str | None = None,
+    message: str | None = None,
 ) -> Callable[[Callable[Concatenate[T, P], R]], Callable[P, Predicate[T, R]]]:
     """A Decorator for creating object-based rules.
 
@@ -31,6 +32,8 @@ def object_rule[T, R: ReturnType, **P](
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
         predicate_name (str, optional): The name of the predicate. Defaults to None.
+        message (str, optional): Reported as `Failure.message` when the rule fails.
+            Defaults to the function's docstring.
 
     Raises:
         InvalidRuleError: If the function does not accept the object under test positionally.
@@ -91,6 +94,7 @@ def object_rule[T, R: ReturnType, **P](
         fn: Callable[Concatenate[T, P], R],
     ) -> Callable[P, Predicate[T, R]]:
         rule_name = predicate_name or fn.__name__
+        failure_message = _failure_message(fn, message)
         arguments_signature = rule_signature(fn, rule_name, reserved=1)
         processors = find_processors(fn, name=rule_name, skip=1)
 
@@ -108,7 +112,12 @@ def object_rule[T, R: ReturnType, **P](
                 inner,
                 operator=operator,
                 name=predicate_name,
-                failure=Failure(rule_name, tuple(bound.args), dict(bound.kwargs)),
+                failure=Failure(
+                    rule_name,
+                    tuple(bound.args),
+                    dict(bound.kwargs),
+                    message=failure_message,
+                ),
             )
 
         wrapper.__signature__ = arguments_signature  # type: ignore[attr-defined]
@@ -122,6 +131,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     *,
     operator: OperatorType = "logical",
     predicate_name: str | None = None,
+    message: str | None = None,
     check_key_existence: bool = False,
     forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
 ) -> Callable[
@@ -139,6 +149,8 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
     Args:
         operator (Literal["bitwise", "logical"]): The operator to use for combining predicates.
         predicate_name (str, optional): The name of the predicate. Defaults to None.
+        message (str, optional): Reported as `Failure.message` when the rule fails.
+            Defaults to the function's docstring.
         check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to False.
         forbidden_keys (set[str], optional): A set of keys that are not allowed in the dictionary. Defaults to None.
 
@@ -189,6 +201,7 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
         fn: Callable[Concatenate[T, K, P], R],
     ) -> Callable[Concatenate[K, P], Predicate[T, R]]:
         rule_name = predicate_name or fn.__name__
+        failure_message = _failure_message(fn, message)
         arguments_signature = rule_signature(fn, rule_name, reserved=2)
         processors = find_processors(fn, name=rule_name, skip=2)
         key_name = next(iter(arguments_signature.parameters))
@@ -225,7 +238,12 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
                 inner,
                 operator=operator,
                 name=predicate_name,
-                failure=Failure(rule_name, tuple(bound.args), dict(bound.kwargs)),
+                failure=Failure(
+                    rule_name,
+                    tuple(bound.args),
+                    dict(bound.kwargs),
+                    message=failure_message,
+                ),
             )
 
         wrapper.__signature__ = arguments_signature  # type: ignore[attr-defined]
@@ -233,6 +251,12 @@ def subscriptable_rule[T, K, R: ReturnType, **P](
         return wrapper
 
     return decorator
+
+
+def _failure_message(fn: Callable[..., Any], message: str | None) -> str | None:
+    if message:
+        return message
+    return cleandoc(fn.__doc__) if fn.__doc__ else None
 
 
 def rule_signature(

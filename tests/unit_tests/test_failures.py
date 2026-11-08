@@ -201,3 +201,71 @@ class TestBitwise:
         rule = Predicate(lambda _: True, operator="bitwise", name="is_admin")
         with pytest.raises(TypeError, match="failures\\(\\) needs a logical predicate"):
             rule.failures(ADULT)
+
+
+class TestMessage:
+    def test_message_given_at_registration(self) -> None:
+        registry = ObjectRulesRegistry[User, bool](operator="logical")
+
+        @registry.rule(message="Only admins can do this")
+        def admin(user: User) -> bool:
+            return user.is_admin
+
+        (failure,) = registry["admin"]().failures(ADULT)
+        assert failure.message == "Only admins can do this"
+
+    def test_message_defaults_to_the_description(self) -> None:
+        registry = ObjectRulesRegistry[User, bool](operator="logical")
+        registry.register_rule(lambda user: user.is_admin, name="admin", description="Is an admin")
+
+        (failure,) = registry["admin"]().failures(ADULT)
+        assert failure.message == "Is an admin"
+
+    def test_message_defaults_to_the_docstring(self) -> None:
+        @object_rule()
+        def adult(user: User) -> bool:
+            """User is at least 18.
+
+            Used by the signup form.
+            """
+            return user.age >= 18
+
+        (failure,) = adult().failures(TEEN)
+        assert failure.message == "User is at least 18.\n\nUsed by the signup form."
+
+    def test_message_is_none_without_any_text(self) -> None:
+        (failure,) = is_admin().failures(ADULT)
+        assert failure.message is None
+
+    def test_message_on_a_plain_decorator(self) -> None:
+        @object_rule(message="Must be staff")
+        def staff(user: User) -> bool:
+            return user.email.endswith("@company.com")
+
+        (failure,) = staff().failures(TEEN)
+        assert failure.message == "Must be staff"
+
+    def test_message_on_a_subscriptable_rule(self) -> None:
+        registry = SubscriptableRulesRegistry[dict[str, Any], str, bool](operator="logical")
+
+        @registry.rule(message="Field is required")
+        def required(obj: dict[str, Any], key: str) -> bool:
+            return bool(obj.get(key))
+
+        (failure,) = registry["required"]("name").failures({"name": ""})
+        assert failure.message == "Field is required"
+
+    def test_message_survives_composition_and_negation(self) -> None:
+        @object_rule(message="Must be an admin")
+        def admin(user: User) -> bool:
+            return user.is_admin
+
+        # ADULT is not an admin and passes the age check; TEEN is an admin
+        combined = admin() & age__between(18)
+        assert [f.message for f in combined.failures(ADULT)] == ["Must be an admin"]
+        (negated,) = (~admin()).failures(TEEN)
+        assert negated.negated
+        assert negated.message == "Must be an admin"
+
+    def test_str_is_unchanged(self) -> None:
+        assert str(Failure("admin", message="Must be an admin")) == "admin"

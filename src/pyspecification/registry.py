@@ -99,6 +99,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         *,
         name: str | None = None,
         description: str | None = None,
+        message: str | None = None,
         hidden: bool = False,
     ) -> Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]:
         """A decorator for registering an object-based rule.
@@ -106,6 +107,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         Args:
             name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
+            message (str, optional): Reported as `Failure.message` when the rule fails. Defaults to the description.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
 
         Returns:
@@ -118,6 +120,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
                 fn,
                 name=name,
                 description=description,
+                message=message,
                 hidden=hidden,
             )
 
@@ -130,6 +133,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         *,
         name: str | None = None,
         description: str | None = None,
+        message: str | None = None,
         hidden: bool = False,
     ) -> ObjectRuleFn[T, R, P]:
         """A method for registering an object-based rule.
@@ -138,6 +142,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             fn (ObjectRuleDefinitionFn[T, R, P]): The function to register.
             name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
+            message (str, optional): Reported as `Failure.message` when the rule fails. Defaults to the description.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
 
         Returns:
@@ -148,6 +153,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             fn,
             name=name,
             description=description,
+            message=message,
             hidden=hidden,
         )
 
@@ -157,6 +163,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         *,
         name: str | None,
         description: str | None,
+        message: str | None,
         hidden: bool,
     ) -> ObjectRuleFn[T, R, P]:
         rule_name = _process_rule_name(fn, name)
@@ -167,6 +174,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         factory = object_rule(
             operator=self._operator,
             predicate_name=rule_name,
+            message=message or description,
         )(fn)
         factory.__doc__ = description or fn.__doc__
 
@@ -251,6 +259,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None = None,
         description: str | None = None,
+        message: str | None = None,
         hidden: bool = False,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
@@ -262,6 +271,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         Args:
             name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
+            message (str, optional): Reported as `Failure.message` when the rule fails. Defaults to the description.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
             forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
@@ -278,6 +288,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
                 fn,
                 name=name,
                 description=description,
+                message=message,
                 hidden=hidden,
                 check_key_existence=check_key_existence,
                 forbidden_keys=forbidden_keys,
@@ -292,6 +303,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None = None,
         description: str | None = None,
+        message: str | None = None,
         hidden: bool = False,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
@@ -302,6 +314,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             fn (SubscriptableRuleDefinitionFn[T, K, R, P]): The function to register.
             name (str, optional): The name of the rule, this will override the name of the function. Defaults to None.
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
+            message (str, optional): Reported as `Failure.message` when the rule fails. Defaults to the description.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
             forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
@@ -314,6 +327,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             fn,
             name=name,
             description=description,
+            message=message,
             hidden=hidden,
             check_key_existence=check_key_existence,
             forbidden_keys=forbidden_keys,
@@ -325,6 +339,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         *,
         name: str | None,
         description: str | None,
+        message: str | None,
         hidden: bool,
         check_key_existence: bool | None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...],
@@ -337,6 +352,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         factory = subscriptable_rule(
             operator=self._operator,
             predicate_name=rule_name,
+            message=message or description,
             check_key_existence=(
                 check_key_existence
                 if check_key_existence is not None
