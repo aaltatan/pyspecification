@@ -5,9 +5,9 @@ from typing import Annotated, Any
 import pytest
 from pyspecification import (
     MissingArgumentError,
+    PredicateCompiler,
     Process,
     ProcessArgumentError,
-    PredicateCompiler,
     RuleDoesNotExistError,
     SubscriptableRulesRegistry,
     TooManyArgumentsError,

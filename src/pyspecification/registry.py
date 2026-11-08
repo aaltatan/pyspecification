@@ -80,7 +80,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         self._rules: dict[str, ObjectRuleFn[T, R, ...]] = {}
         self._hidden: set[str] = set()
 
-        self._operator = operator
+        self._operator: OperatorType = operator
 
     @property
     def rules(self) -> dict[str, ObjectRuleFn[T, R, ...]]:
@@ -167,7 +167,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             raise RuleAlreadyRegisteredError(rule_name)
 
         factory = object_rule(
-            operator=self._operator,  # type: ignore  # noqa: PGH003
+            operator=self._operator,
             predicate_name=rule_name,
         )(fn)
         factory.__doc__ = description or fn.__doc__
@@ -243,7 +243,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         self._rules: dict[str, SubscriptableRuleFn[T, K, R, ...]] = {}
         self._hidden: set[str] = set()
 
-        self._operator = operator
+        self._operator: OperatorType = operator
         self._check_key_existence = check_key_existence
         self._forbidden_keys = forbidden_keys
 
@@ -348,7 +348,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             raise RuleAlreadyRegisteredError(rule_name)
 
         factory = subscriptable_rule(
-            operator=self._operator,  # type: ignore  # noqa: PGH003
+            operator=self._operator,
             predicate_name=rule_name,
             check_key_existence=(
                 check_key_existence

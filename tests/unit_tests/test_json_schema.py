@@ -10,10 +10,10 @@ import pytest
 from pyspecification import (
     ExpressionWrapperDict,
     ObjectRulesRegistry,
-    Process,
     Predicate,
     PredicateCompiler,
     PredicateDict,
+    Process,
     SubscriptableRulesRegistry,
     get_expression_json_schema,
     get_json_schema,
@@ -568,7 +568,7 @@ def load_names(path: str) -> frozenset[str]:
     return frozenset(path)
 
 
-def untyped_loader(path):  # type: ignore[no-untyped-def]  # noqa: ANN001, ANN201
+def untyped_loader(path):  # type: ignore[no-untyped-def]  # noqa: ANN001
     return path
 
 
