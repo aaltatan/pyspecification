@@ -7,6 +7,7 @@ authors = [{ name = "aaltatan", email = "a.altatan@gmail.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "pyargprocessors>=0.1.0",
+    "pyvocabulary>=0.1.0",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -32,3 +33,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "sqlalchemy>=2.0.52",
 ]
+
+[tool.uv.sources]
+# the sibling checkout in ~/dev until pyvocabulary is published on PyPI
+pyvocabulary = { path = "../pyvocabulary", editable = true }

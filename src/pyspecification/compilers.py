@@ -4,6 +4,7 @@ from pprint import pformat
 from typing import Any, Literal, TypedDict, TypeGuard
 
 from pyargprocessors import PyargprocessorsError
+from pyvocabulary import located
 
 from .exceptions import PySpecificationError, RuleDoesNotExistError
 from .json_schema import get_json_schema
@@ -154,25 +155,26 @@ class PredicateCompiler[T, R: ReturnType]:
         raise TypeError(_invalid_expression_message(expression, path))
 
     def _compile_single(self, single: PredicateDict, path: str) -> Predicate[T, R]:
-        try:
+        with located(path, PySpecificationError, PyargprocessorsError):
             if single["name"] not in self._rules:
                 raise RuleDoesNotExistError(single["name"], self._rules.keys())
 
             predicate = self._rules[single["name"]](*single["args"], **single["kwargs"])
-        except (PySpecificationError, PyargprocessorsError) as error:
-            error.add_note(f"at {path}")
-            raise
 
         if single["inverse"]:
             predicate = ~predicate
 
         return predicate
 
-    def _compile_wrapper(self, wrapper: ExpressionWrapperDict, path: str) -> Predicate[T, R]:
+    def _compile_wrapper(
+        self, wrapper: ExpressionWrapperDict, path: str
+    ) -> Predicate[T, R]:
         predicate = self._initial_predicate_factory(wrapper)
 
         for index, expression in enumerate(wrapper["expressions"]):
-            compiled_predicate = self._compile(expression, f"{path}.expressions[{index}]")
+            compiled_predicate = self._compile(
+                expression, f"{path}.expressions[{index}]"
+            )
 
             if wrapper["operator"] == "all":
                 predicate &= compiled_predicate

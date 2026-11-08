@@ -2,6 +2,8 @@
 from collections.abc import Callable
 from typing import Any, Concatenate
 
+from pyvocabulary import Vocabulary
+
 from .exceptions import RuleAlreadyRegisteredError, RuleDoesNotExistError
 from .predicate import OperatorType, Predicate, ReturnType
 from .rules import object_rule, subscriptable_rule
@@ -10,8 +12,12 @@ from .validators import validate_python_vars_fn_naming_convention
 type ObjectRuleDefinitionFn[T, R: ReturnType, **P] = Callable[Concatenate[T, P], R]
 type ObjectRuleFn[T, R: ReturnType, **P] = Callable[P, Predicate[T, R]]
 
-type SubscriptableRuleDefinitionFn[T, K, R: ReturnType, **P] = Callable[Concatenate[T, K, P], R]
-type SubscriptableRuleFn[T, K, R: ReturnType, **P] = Callable[Concatenate[K, P], Predicate[T, R]]
+type SubscriptableRuleDefinitionFn[T, K, R: ReturnType, **P] = Callable[
+    Concatenate[T, K, P], R
+]
+type SubscriptableRuleFn[T, K, R: ReturnType, **P] = Callable[
+    Concatenate[K, P], Predicate[T, R]
+]
 
 
 class ObjectRulesRegistry[T, R: ReturnType]:
@@ -77,23 +83,15 @@ class ObjectRulesRegistry[T, R: ReturnType]:
     """  # noqa: E501
 
     def __init__(self, operator: OperatorType) -> None:
-        self._rules: dict[str, ObjectRuleFn[T, R, ...]] = {}
-        self._hidden: set[str] = set()
-
+        self._rules: Vocabulary[ObjectRuleFn[T, R, ...]] = _rules_vocabulary()
         self._operator = operator
 
     @property
     def rules(self) -> dict[str, ObjectRuleFn[T, R, ...]]:
         """A dictionary of registered rules."""
-        return {
-            rule_name: rule
-            for rule_name, rule in self._rules.items()
-            if rule_name not in self._hidden
-        }
+        return dict(self._rules)
 
     def __getitem__(self, name: str) -> ObjectRuleFn[T, R, ...]:
-        if name not in self._rules or name in self._hidden:
-            raise RuleDoesNotExistError(name, self.rules.keys())
         return self._rules[name]
 
     def rule[**P](
@@ -163,7 +161,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
     ) -> ObjectRuleFn[T, R, P]:
         rule_name = _process_rule_name(fn, name)
 
-        if rule_name in self._rules:
+        if self._rules.is_registered(rule_name):
             raise RuleAlreadyRegisteredError(rule_name)
 
         factory = object_rule(
@@ -172,12 +170,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         )(fn)
         factory.__doc__ = description or fn.__doc__
 
-        if hidden:
-            self._hidden.add(rule_name)
-
-        self._rules[rule_name] = factory
-
-        return factory
+        return self._rules.add(rule_name, factory, hidden=hidden)
 
 
 class SubscriptableRulesRegistry[T, K, R: ReturnType]:
@@ -240,9 +233,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         check_key_existence: bool = False,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
     ) -> None:
-        self._rules: dict[str, SubscriptableRuleFn[T, K, R, ...]] = {}
-        self._hidden: set[str] = set()
-
+        self._rules: Vocabulary[SubscriptableRuleFn[T, K, R, ...]] = _rules_vocabulary()
         self._operator = operator
         self._check_key_existence = check_key_existence
         self._forbidden_keys = forbidden_keys
@@ -250,15 +241,9 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
     @property
     def rules(self) -> dict[str, SubscriptableRuleFn[T, K, R, ...]]:
         """A dictionary of registered rules."""
-        return {
-            rule_name: rule
-            for rule_name, rule in self._rules.items()
-            if rule_name not in self._hidden
-        }
+        return dict(self._rules)
 
     def __getitem__(self, name: str) -> SubscriptableRuleFn[T, K, R, ...]:
-        if name not in self._rules or name in self._hidden:
-            raise RuleDoesNotExistError(name, self.rules.keys())
         return self._rules[name]
 
     def rule[**P](
@@ -269,7 +254,9 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         hidden: bool = False,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
-    ) -> Callable[[SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]]:
+    ) -> Callable[
+        [SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]
+    ]:
         """A decorator for registering a subscriptable-based rule.
 
         Args:
@@ -344,7 +331,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
     ) -> SubscriptableRuleFn[T, K, R, P]:
         rule_name = _process_rule_name(fn, name)
 
-        if rule_name in self._rules:
+        if self._rules.is_registered(rule_name):
             raise RuleAlreadyRegisteredError(rule_name)
 
         factory = subscriptable_rule(
@@ -355,16 +342,13 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
                 if check_key_existence is not None
                 else self._check_key_existence
             ),
-            forbidden_keys=(forbidden_keys if forbidden_keys is not None else self._forbidden_keys),
+            forbidden_keys=(
+                forbidden_keys if forbidden_keys is not None else self._forbidden_keys
+            ),
         )(fn)
         factory.__doc__ = description or fn.__doc__
 
-        if hidden:
-            self._hidden.add(rule_name)
-
-        self._rules[rule_name] = factory
-
-        return factory
+        return self._rules.add(rule_name, factory, hidden=hidden)
 
 
 def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
@@ -377,3 +361,11 @@ def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
     validate_python_vars_fn_naming_convention(rule_name)
 
     return rule_name
+
+
+def _rules_vocabulary[F]() -> Vocabulary[F]:
+    return Vocabulary(
+        "rule",
+        does_not_exist=RuleDoesNotExistError,
+        already_registered=RuleAlreadyRegisteredError,
+    )
