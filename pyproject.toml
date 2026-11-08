@@ -34,6 +34,3 @@ dev = [
     "sqlalchemy>=2.0.52",
 ]
 
-[tool.uv.sources]
-# the sibling checkout in ~/dev until pyvocabulary is published on PyPI
-pyvocabulary = { path = "../pyvocabulary", editable = true }

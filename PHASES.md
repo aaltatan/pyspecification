@@ -4,7 +4,7 @@
 - [x] `Predicate.failures()` returning `tuple[Failure, ...]` (branch `feature/failures`, 280 tests)
 - [x] Registries, JSON Schema and argument errors on pyvocabulary (branch `refactor/pyvocabulary`, 259 tests)
 - [x] Rule names with a trailing newline are rejected (bug in `re.match` with `$`)
-- [ ] Open PRs for both branches; the refactor stays a draft until pyvocabulary is on PyPI
+- [x] Open PRs for both branches. Merged into `main` locally for review instead of PRs; pyvocabulary 0.1.0 now comes from PyPI (2026-11-08)
 
 ## Next
 - [ ] `Failure.message`: a `message=` option at registration, defaulting to the rule description
