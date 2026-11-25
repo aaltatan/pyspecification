@@ -833,6 +833,39 @@ schema = get_expression_json_schema(registry.rules)
 print(schema["$schema"])  # https://json-schema.org/draft/2020-12/schema
 ```
 
+### Labels for editors
+
+Editors such as rulify show people words, not rule names. Give a rule a `label=` (one
+text, or one per language) and pass `registry.labels`; mark arguments with pyvocabulary's
+`Label` and `Choices`. The schema root has `x-kind: "predicate"`, and a
+`<field>__<operator>` name is split into `x-field` and `x-operator`.
+
+```python
+from typing import Annotated
+
+from pyvocabulary import Choices, Label
+
+Tier = Annotated[str, Choices({"gold": {"en": "Gold", "ar": "ذهبي"}, "silver": "Silver"})]
+
+
+@registry.rule(label={"en": "Tier is", "ar": "الفئة هي"})
+def tier__eq(user: User, value: Tier) -> bool:
+    return True
+
+
+@registry.rule(label={"en": "Age at least", "ar": "العمر لا يقل عن"})
+def age__ge(user: User, minimum: Annotated[int, Label("Minimum")]) -> bool:
+    return user.age >= minimum
+
+
+schema = get_expression_json_schema(registry.rules, labels=registry.labels)
+age = schema["$defs"]["expression"]["oneOf"][2]
+
+print(schema["x-kind"], age["x-field"], age["x-operator"])  # predicate age ge
+print(age["x-label"])  # {'en': 'Age at least', 'ar': 'العمر لا يقل عن'}
+print(age["properties"]["args"]["prefixItems"])  # [{'type': 'integer', 'x-label': 'Minimum'}]
+```
+
 ### Supported types
 
 `get_json_schema(annotation)` maps Python annotations to JSON Schema. Unknown or

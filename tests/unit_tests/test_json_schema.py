@@ -59,6 +59,8 @@ def test_get_rule_json_schema_describes_the_predicate_dictionary() -> None:
         "required": ["name", "args", "kwargs", "inverse"],
         "additionalProperties": False,
         "description": "Whether the name starts with a value.",
+        "x-field": "name",
+        "x-operator": "istartswith",
     }
 
 

@@ -2,7 +2,7 @@
 from collections.abc import Callable
 from typing import Any, Concatenate
 
-from pyvocabulary import Vocabulary
+from pyvocabulary import Text, Vocabulary
 
 from .exceptions import RuleAlreadyRegisteredError, RuleDoesNotExistError
 from .predicate import OperatorType, Predicate, ReturnType
@@ -91,6 +91,11 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         """A dictionary of registered rules."""
         return dict(self._rules)
 
+    @property
+    def labels(self) -> dict[str, Text]:
+        """A dictionary of the labels of visible rules that have one."""
+        return self._rules.labels
+
     def __getitem__(self, name: str) -> ObjectRuleFn[T, R, ...]:
         return self._rules[name]
 
@@ -101,6 +106,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         description: str | None = None,
         message: str | None = None,
         hidden: bool = False,
+        label: Text | None = None,
     ) -> Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]:
         """A decorator for registering an object-based rule.
 
@@ -109,6 +115,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
             message (str, optional): Reported as `Failure.message` when the rule fails. Defaults to the description.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
+            label (Text, optional): Shown to people instead of the name: one text, or one per language (`{"en": ..., "ar": ...}`). Defaults to None.
 
         Returns:
             Callable[[ObjectRuleDefinitionFn[T, R, P]], ObjectRuleFn[T, R, P]]: The decorator.
@@ -122,6 +129,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
                 description=description,
                 message=message,
                 hidden=hidden,
+                label=label,
             )
 
         return decorator
@@ -135,6 +143,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         description: str | None = None,
         message: str | None = None,
         hidden: bool = False,
+        label: Text | None = None,
     ) -> ObjectRuleFn[T, R, P]:
         """A method for registering an object-based rule.
 
@@ -144,6 +153,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
             message (str, optional): Reported as `Failure.message` when the rule fails. Defaults to the description.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
+            label (Text, optional): Shown to people instead of the name: one text, or one per language (`{"en": ..., "ar": ...}`). Defaults to None.
 
         Returns:
             ObjectRuleFn[T, R, P]: The registered rule.
@@ -155,6 +165,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
             description=description,
             message=message,
             hidden=hidden,
+            label=label,
         )
 
     def _register_rule[**P](
@@ -165,6 +176,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         description: str | None,
         message: str | None,
         hidden: bool,
+        label: Text | None,
     ) -> ObjectRuleFn[T, R, P]:
         rule_name = _process_rule_name(fn, name)
 
@@ -178,7 +190,7 @@ class ObjectRulesRegistry[T, R: ReturnType]:
         )(fn)
         factory.__doc__ = description or fn.__doc__
 
-        return self._rules.add(rule_name, factory, hidden=hidden)
+        return self._rules.add(rule_name, factory, hidden=hidden, label=label)
 
 
 class SubscriptableRulesRegistry[T, K, R: ReturnType]:
@@ -251,6 +263,11 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         """A dictionary of registered rules."""
         return dict(self._rules)
 
+    @property
+    def labels(self) -> dict[str, Text]:
+        """A dictionary of the labels of visible rules that have one."""
+        return self._rules.labels
+
     def __getitem__(self, name: str) -> SubscriptableRuleFn[T, K, R, ...]:
         return self._rules[name]
 
@@ -261,6 +278,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         description: str | None = None,
         message: str | None = None,
         hidden: bool = False,
+        label: Text | None = None,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
     ) -> Callable[
@@ -273,6 +291,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
             message (str, optional): Reported as `Failure.message` when the rule fails. Defaults to the description.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
+            label (Text, optional): Shown to people instead of the name: one text, or one per language (`{"en": ..., "ar": ...}`). Defaults to None.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
             forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
 
@@ -290,6 +309,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
                 description=description,
                 message=message,
                 hidden=hidden,
+                label=label,
                 check_key_existence=check_key_existence,
                 forbidden_keys=forbidden_keys,
             )
@@ -305,6 +325,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         description: str | None = None,
         message: str | None = None,
         hidden: bool = False,
+        label: Text | None = None,
         check_key_existence: bool | None = None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
     ) -> SubscriptableRuleFn[T, K, R, P]:
@@ -316,6 +337,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             description (str, optional): The description of the rule, this will override the docstring of the function. Defaults to None.
             message (str, optional): Reported as `Failure.message` when the rule fails. Defaults to the description.
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
+            label (Text, optional): Shown to people instead of the name: one text, or one per language (`{"en": ..., "ar": ...}`). Defaults to None.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
             forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
 
@@ -329,6 +351,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             description=description,
             message=message,
             hidden=hidden,
+            label=label,
             check_key_existence=check_key_existence,
             forbidden_keys=forbidden_keys,
         )
@@ -341,6 +364,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         description: str | None,
         message: str | None,
         hidden: bool,
+        label: Text | None,
         check_key_existence: bool | None,
         forbidden_keys: tuple[str, ...] | tuple[int, ...],
     ) -> SubscriptableRuleFn[T, K, R, P]:
@@ -364,7 +388,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         )(fn)
         factory.__doc__ = description or fn.__doc__
 
-        return self._rules.add(rule_name, factory, hidden=hidden)
+        return self._rules.add(rule_name, factory, hidden=hidden, label=label)
 
 
 def _process_rule_name(fn: Callable[..., Any], name: str | None = None) -> str:
