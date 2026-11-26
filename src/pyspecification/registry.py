@@ -280,7 +280,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         hidden: bool = False,
         label: Text | None = None,
         check_key_existence: bool | None = None,
-        forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
+        forbidden_keys: tuple[str, ...] | tuple[int, ...] | None = None,
     ) -> Callable[
         [SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]
     ]:
@@ -293,7 +293,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
             label (Text, optional): Shown to people instead of the name: one text, or one per language (`{"en": ..., "ar": ...}`). Defaults to None.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
-            forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
+            forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to None, which uses the registry's forbidden keys.
 
         Returns:
             Callable[[SubscriptableRuleDefinitionFn[T, K, R, P]], SubscriptableRuleFn[T, K, R, P]]: The decorator.
@@ -327,7 +327,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         hidden: bool = False,
         label: Text | None = None,
         check_key_existence: bool | None = None,
-        forbidden_keys: tuple[str, ...] | tuple[int, ...] = (),
+        forbidden_keys: tuple[str, ...] | tuple[int, ...] | None = None,
     ) -> SubscriptableRuleFn[T, K, R, P]:
         """A method for registering a subscriptable-based rule.
 
@@ -339,7 +339,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
             hidden (bool, optional): Whether to hide the rule from the registry. Defaults to False.
             label (Text, optional): Shown to people instead of the name: one text, or one per language (`{"en": ..., "ar": ...}`). Defaults to None.
             check_key_existence (bool, optional): Whether to check if the key exists in the dictionary or list. Defaults to None.
-            forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to ().
+            forbidden_keys (tuple[str, ...] | tuple[int, ...], optional): A set of keys that are not allowed in the dictionary. Defaults to None, which uses the registry's forbidden keys.
 
         Returns:
             SubscriptableRuleFn[T, K, R, P]: The registered rule.
@@ -366,7 +366,7 @@ class SubscriptableRulesRegistry[T, K, R: ReturnType]:
         hidden: bool,
         label: Text | None,
         check_key_existence: bool | None,
-        forbidden_keys: tuple[str, ...] | tuple[int, ...],
+        forbidden_keys: tuple[str, ...] | tuple[int, ...] | None,
     ) -> SubscriptableRuleFn[T, K, R, P]:
         rule_name = _process_rule_name(fn, name)
 

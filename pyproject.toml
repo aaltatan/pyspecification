@@ -20,6 +20,7 @@ pyspecification = "pyspecification:main"
 
 [project.urls]
 "Homepage" = "https://github.com/aaltatan/pyspecification"
+"Documentation" = "https://aaltatan.github.io/pyspecification/"
 "Issues" = "https://github.com/aaltatan/pyspecification/issues"
 
 [build-system]
@@ -32,6 +33,9 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "sqlalchemy>=2.0.52",
+]
+docs = [
+    "mkdocs-material>=9.8.2",
 ]
 
 

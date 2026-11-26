@@ -315,6 +315,31 @@ def test_raising_error_when_using_one_key_of_forbidden_keys(
         rule({"name": "Abdullah", "age": 18, "is_admin": True})
 
 
+def test_registry_forbidden_keys_apply_to_rules_without_their_own() -> None:
+    registry = SubscriptableRulesRegistry[dict[str, Any], str, bool](
+        operator="logical", forbidden_keys=("password",)
+    )
+
+    @registry.rule()
+    def field__eq(obj: dict[str, Any], key: str, value: str) -> bool:
+        return obj[key] == value
+
+    @registry.rule(forbidden_keys=("cost",))
+    def field__ne(obj: dict[str, Any], key: str, value: str) -> bool:
+        return obj[key] != value
+
+    row = {"password": "x", "cost": "1"}
+
+    with pytest.raises(RuleKeyDoesNotExistError, match="Key 'password'"):
+        field__eq("password", "x")(row)
+
+    # a rule's own forbidden_keys replace the registry's
+    assert field__ne("password", "y")(row)
+
+    with pytest.raises(RuleKeyDoesNotExistError, match="Key 'cost'"):
+        field__ne("cost", "2")(row)
+
+
 def test_raising_error_when_using_hidden_rule_2(
     sub_registry: SubscriptableRulesRegistry[dict[str, Any], str, bool],
 ) -> None:
