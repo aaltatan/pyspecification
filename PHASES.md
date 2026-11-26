@@ -17,4 +17,4 @@
 ## rulify prerequisites
 - [x] `rule(label=)` / `register_rule(label=)` and `labels` on both registries (one text, or one per language)
 - [x] `get_expression_json_schema(rules, *, labels=)` emits `x-kind: "predicate"`, each rule's `x-label`, `x-field` / `x-operator` (split at the last `__`) and the arguments' inline `x-label` / `x-choices` (pyvocabulary `Label` / `Choices`); 4.2.0 (branch `feat/labels`, not published)
-- [ ] After pyvocabulary 0.2.0 is on PyPI: require `pyvocabulary>=0.2.0`, publish 4.2.0
+- [x] After pyvocabulary 0.2.0 is on PyPI: require `pyvocabulary>=0.2.0`, publish 4.2.0
