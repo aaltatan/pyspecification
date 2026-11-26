@@ -9,10 +9,19 @@ the rule's own parameters.
 ### `Predicate[T, R]`
 
 ```py
-Predicate(fn: Callable[[T], R], /, *, operator: OperatorType, name: str | None = None)
+Predicate(
+    fn: Callable[[T], R],
+    /,
+    *,
+    operator: OperatorType,
+    name: str | None = None,
+    failure: Failure | None = None,
+)
 ```
 
-A callable wrapper around `fn` that composes with other predicates.
+A callable wrapper around `fn` that composes with other predicates. `failure` is what
+`failures()` reports when this predicate (built by hand, not by a rule decorator) fails;
+without it, a `Failure` named after the predicate is reported (none for an unnamed lambda).
 
 | Member | Description |
 | --- | --- |
